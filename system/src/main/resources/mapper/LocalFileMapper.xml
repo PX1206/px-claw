@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.claw.system.mapper.LocalFileMapper">
+    <select id="getFileList" resultType="com.claw.system.vo.FileVo">
+        select f.`code`, f.`name`, f.type, f.domain, f.path, f.suffix,
+               concat(#{localFilePath,jdbcType=VARCHAR}, f.code) as url,
+               f.source, f.size, f.create_time, u.nickname as create_by,
+               f.sync_directory_id as syncDirectoryId, f.relative_path as relativePath,
+               COALESCE(f.update_time, f.create_time) as lastSyncTime
+        from file f
+        left join `user` u on f.create_by = u.id
+        <where>
+            <if test="param.type != null">
+                and f.type = #{param.type,jdbcType=INTEGER}
+            </if>
+            <if test="param.name != null and param.name != ''">
+                AND f.name LIKE CONCAT('%',#{param.name,jdbcType=VARCHAR},'%')
+            </if>
+            <if test="param.source != null">
+                and f.source = #{param.source,jdbcType=INTEGER}
+            </if>
+            <if test="param.userId != null">
+                AND f.create_by = #{param.userId,jdbcType=INTEGER}
+            </if>
+            <if test="param.syncDirectoryId != null">
+                AND f.sync_directory_id = #{param.syncDirectoryId,jdbcType=BIGINT}
+            </if>
+            <if test="param.syncDirectoryId != null and param.relativePath != null">
+                <choose>
+                    <when test="param.relativePath == ''">
+                        AND (f.relative_path IS NULL OR f.relative_path = '' OR f.relative_path NOT LIKE '%/%')
+                    </when>
+                    <otherwise>
+                        AND (f.relative_path = #{param.relativePath,jdbcType=VARCHAR}
+                             OR (f.relative_path LIKE CONCAT(#{param.relativePath,jdbcType=VARCHAR}, '/%')
+                                 AND LOCATE('/', f.relative_path, CHAR_LENGTH(#{param.relativePath,jdbcType=VARCHAR})+2)=0))
+                    </otherwise>
+                </choose>
+            </if>
+            and f.del_flag = 0
+        </where>
+        order by COALESCE(f.update_time, f.create_time) desc
+    </select>
+
+    <select id="getDistinctSyncDirPaths" resultType="com.claw.system.dto.SyncDirPathDto">
+        SELECT DISTINCT f.sync_directory_id as syncDirectoryId, f.relative_path as relativePath
+        FROM file f
+        WHERE f.del_flag = 0 AND f.sync_directory_id IN
+        <foreach collection="syncDirIds" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+        AND f.relative_path IS NOT NULL AND f.relative_path != ''
+    </select>
+
+    <select id="listBySyncDirectory" resultType="com.claw.system.dto.SyncFileMetaDto">
+        SELECT f.code as code, f.relative_path as relativePath, f.size as size,
+               COALESCE(f.update_time, f.create_time) as updateTime
+        FROM file f
+        WHERE f.del_flag = 0 AND f.sync_directory_id = #{syncDirectoryId,jdbcType=BIGINT}
+          AND f.relative_path IS NOT NULL AND f.relative_path != ''
+    </select>
+
+    <select id="sumSyncFileBytesByUserId" resultType="java.lang.Long">
+        SELECT COALESCE(SUM(CAST(f.size AS UNSIGNED)), 0)
+        FROM file f
+        WHERE f.create_by = #{userId}
+          AND f.del_flag = 0
+          AND f.sync_directory_id IS NOT NULL
+    </select>
+
+</mapper>

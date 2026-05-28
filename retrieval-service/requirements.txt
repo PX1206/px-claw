@@ -1,0 +1,8 @@
+fastapi>=0.109.0
+uvicorn[standard]>=0.27.0
+faiss-cpu>=1.7.4
+# 3.x 与旧版离线快照兼容性差；若缺 1_Pooling/config.json 也会报错，见 models 目录说明
+sentence-transformers>=2.2.2,<3.0.0
+transformers>=4.30.0,<5.0.0
+numpy>=1.21.0
+pydantic>=2.0.0

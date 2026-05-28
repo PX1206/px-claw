@@ -1,0 +1,11 @@
+# 生产环境配置（ny.px-apricot.cn）
+# 启动时使用: java -jar xxx.jar --spring.profiles.active=prod
+
+# 当前服务对外访问地址（用于文件 URL、二维码等，需与 Nginx 代理的 /api 一致）
+local:
+  host: https://ny.px-apricot.cn/api/
+
+# 生产环境降低 SQL 日志级别
+logging:
+  level:
+    com.claw.system.mapper: warn

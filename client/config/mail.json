@@ -1,0 +1,30 @@
+{
+  "enabled": false,
+  "pollIntervalMs": 120000,
+  "preset": "qq",
+  "providerId": "local",
+  "contacts": [
+    {
+      "id": "3eb0c865-229c-4ad5-8f15-3ff4c5c86486",
+      "nickname": "px",
+      "email": "723643807@qq.com"
+    }
+  ],
+  "imap": {
+    "host": "imap.qq.com",
+    "port": 993,
+    "user": "97442433@qq.com",
+    "password": "qmteymojrsshbgff",
+    "folder": "INBOX",
+    "ssl": true
+  },
+  "smtp": {
+    "host": "smtp.qq.com",
+    "port": 465,
+    "user": "97442433@qq.com",
+    "password": "qmteymojrsshbgff",
+    "fromAddress": "",
+    "ssl": true,
+    "starttls": false
+  }
+}

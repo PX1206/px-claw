@@ -1,0 +1,14 @@
+{
+  "baseUrl": "http://127.0.0.1:9168",
+  "token": "83dc67fc-c49c-4431-8ea9-2f75ac685b58",
+  "user": {
+    "id": 1,
+    "username": "admin",
+    "nickname": "管理员",
+    "role": "admin",
+    "headImg": "/api/file/2SxhXiwTlN79tZXW1FwrZyArUXVjmumV?Authorization=dbefc9d1-245a-4b1d-bf5a-74daf828c632",
+    "sex": null,
+    "birthday": null,
+    "mobile": "13100000000"
+  }
+}

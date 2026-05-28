@@ -1,0 +1,167 @@
+server:
+  port: 9168
+  tomcat:
+    max-threads: 500        # 最大线程数
+    min-spare-threads: 50   # 最小空闲线程数
+    accept-count: 200       # 等待队列大小
+
+logging:
+  config: classpath:logback-spring.xml
+  level:
+    com.claw.system.mapper: debug # 使用logging方式打印SQL日志，方便查看logid
+
+spring:
+  application:
+    # 服务名称
+    name: claw-system
+  servlet:
+    multipart:
+      max-file-size: 1024MB # 设置最大上传文件大小限制
+      max-request-size: 1024MB # 需 >= max-file-size，否则大安装包上传失败
+  main:
+    allow-bean-definition-overriding: true
+  profiles:
+    active: dev
+  datasource:
+    url: jdbc:mysql://127.0.0.1:3306/claw_db?useUnicode=true&characterEncoding=utf-8&useSSL=false
+    username: root
+    password: px123456
+    # 使用druid数据源
+    druid:
+      #2.连接池配置
+      #初始化连接池的连接数量 大小，最小，最大
+      initial-size: 5
+      min-idle: 5
+      max-active: 20
+      #配置获取连接等待超时的时间
+      max-wait: 60000
+      #配置间隔多久才进行一次检测，检测需要关闭的空闲连接，单位是毫秒
+      time-between-eviction-runs-millis: 60000
+      # 配置一个连接在池中最小生存的时间，单位是毫秒
+      min-evictable-idle-time-millis: 300000
+      validation-query: SELECT 1
+      test-while-idle: true
+      test-on-borrow: false
+      test-on-return: false
+      # 是否缓存preparedStatement，也就是PSCache  官方建议MySQL下建议关闭   个人建议如果想用SQL防火墙 建议打开
+      pool-prepared-statements: false
+      max-pool-prepared-statement-per-connection-size: 20
+      # 配置监控统计拦截的filters，去掉后监控界面sql无法统计，'wall'用于防火墙
+      filter:
+        stat:
+          merge-sql: true
+          slow-sql-millis: 5000
+  redis:
+    host: 127.0.0.1
+    port: 6379
+    password: px123456
+
+rocketmq:
+  name-server: 127.0.0.1:9876
+  producer:
+    group: claw-group
+    send-message-timeout: 6000
+  instance-name: claw-instance
+
+mybatis-plus:
+  configuration:
+    map-underscore-to-camel-case: true # 虽然默认为 true ，但是还是显示去指定下。
+    #log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+  global-config:
+    db-config:
+      id-type: AUTO
+      # 全局逻辑删除的实体字段名(since 3.3.0,配置后可以忽略不配置步骤2)
+      logic-delete-field: delFlag
+      # 逻辑已删除值(默认为 1)
+      logic-delete-value: 1
+      # 逻辑未删除值(默认为 0)
+      logic-not-delete-value: 0
+  mapper-locations: classpath*:mapper/*.xml
+  type-aliases-package: com.claw.system.entity
+
+
+# knife4j全局配置
+knife4j:
+  enable: true  #是否开启Swagger
+  basic:
+    enable: true  #进入界面是否需要账号密码
+    username: px
+    password: px123456
+
+
+user:
+  password-error-num: 5
+
+aliyun:
+  sms: # 阿里云短信服务参数，申请开通的时候有
+    access-key-id: LTAI4G4GFD64GD3G11G
+    secret: 452yI5FSF1S31F3S1F1FF1
+    region-id: cn-hangzhou
+    sys-domain: dysmsapi.aliyuncs.com
+    sys-action: SendSms
+    sys-version: 2017-05-25
+    send-max-num: 10
+    register: # 短信验证码信息模版
+      sign-name: sakura
+      template-code: SMS_18525113
+      template-param: code # 阿里云短信模板参数名
+
+rsa:
+  data:
+    # 前后端数据交互私钥（rsa），注意私钥不能泄露
+    private-key-str: MIICdgIBADANBgkqhkiG9w0BAQEFAASCAmAwggJcAgEAAoGBAIEv4xH8oO4xGr9+Bha4F0RKCixYCpV5XDVdiAfb4fTatbbYknK/WdyJrUDNg6fexIfQ+rnC3NRsrlPUMdw4fG/NP4iA6yDoI66VgxwwNfWNEwH3mD+M7PKuSYdVWqMDkM0Kv07/1ZZdznq/9wI6wgRfMB7tTR+/W9piyORNNH7TAgMBAAECgYA/WUUnB9O+mbO9HUZNE77NDOWKMy4VeCqAPLo86FUYJbufyvmdbTnajGS5901NH08OLqsUNnrla9ncX5yHmedilDWepqliPmLHFkddmPP+5J5Dp9en8E7JlYJ4oyue7t6AlR1TVeTbZZH9S4O1NUyPs83bLCvKvi/J7rR9/NHHQQJBAMs3T2KNIVfiSbvl61f0Ii3XTcNM6K5ga1qa2fv4bV7LckwUg8hK0Rgq632kLuDqiAAZckN/ex2myDzRuh8y+6ECQQCivhPiP4+1Tf4Ch/6Z72lnnrvXvG7StLGLNEWi078jmba0xjV23pHLAkJeRJOp3nS6rxgXVate+Qbplq0i9YXzAkAcKhdDhmHXp1Imy4/Ziclu5wctCSy6djyKuyl5BY5K9BFsP++fw9bE7bXjnOyuWXLt6Jjwh+uNSX85BqwwBMXhAkAWVYOhDxwHw7ZSXpuAQKz0fYJF7yQ+YnHjKr9Lw0d9+UBruq/nqk/TznGRQlQJge//Frx1p1onZIGgWP9VxuAlAkEAwOwABEE0GFvWw5zikSAjIOo35ZTJt+2Lnw5q4gN7qfwEZpZjlt0beg8hqnMmFe/BU7KdSASVG09HfqTak2uAGA==
+    public-key-str: MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQCBL+MR/KDuMRq/fgYWuBdESgosWAqVeVw1XYgH2+H02rW22JJyv1ncia1AzYOn3sSH0Pq5wtzUbK5T1DHcOHxvzT+IgOsg6COulYMcMDX1jRMB95g/jOzyrkmHVVqjA5DNCr9O/9WWXc56v/cCOsIEXzAe7U0fv1vaYsjkTTR+0wIDAQAB
+  open:
+    private-key-str: MIICdwIBADANBgkqhkiG9w0BAQEFAASCAmEwggJdAgEAAoGBAJerPMjtrOHodYkwY1wGGuX6UJf9CLgiZvixUMnh4qQvyhWSa0lgb/tsdnb4LrIF3/fK0CES4zohKoc6PVYRXAJL9KRRBlPJUlAy8PkjZ043wQ+S+XT0RzE1saR6lfLtof66HwpCxhUWdT/ceuAXUujMp963spBKiTSGGUG+YHKVAgMBAAECgYAKBUxM0jc77cnmOIY4DEc2rqUohZVP5SX8hGqcDAqXYnjtl/DytiZv7Cifj6I2LOExU/sQVFki/BH9QUHQL/FuM1Q0VfdSYo+7akBAfppFzBETj7jwNaR7vmkcR+LUd+XT5zEbvhdzWmtKJ4k3A+szgKm2xkBaUNYVpx3CzkjT+QJBANGLMRV2nMtiSiGFNGD797iMd8YDD4qcaSoWFWQB+1f2/EhM+WmciaLt415dV3HNmrfTuX3CcHPf0Vbhaqu62aMCQQC5S1FJTEtlZRZjB5I36MWgf7NN8CIY3W0uM++EXJuMEpqQvawmqQui6Ct9j7nE9gbJq9txkIyNrlMmgK78M7ZnAkBqnXim5AfZD7SKI51H70vWUVornKkOrJBxgnT1wnBhDGDGZKvOSYBaLtGt1K5GUAd1mrtZOlI/EtUPcHf20oYjAkEAtbzIumKpZIbUgUbQxCN7iqMVo3DOkKLFTlbEKoeGTMmGbkaKjdSpxBuBZILOiv9fwvfboTRMlz4O8imu91BlKwJBAJDIwe8UhhcDyqleyMPU/xZUfuKW/Wz3yV5LWvk4dCOmymiI364qu3kTF2REvQc8hcHHqO4x9XeUvi6HbDv/NS8=
+    public-key-str: MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQCXqzzI7azh6HWJMGNcBhrl+lCX/Qi4Imb4sVDJ4eKkL8oVkmtJYG/7bHZ2+C6yBd/3ytAhEuM6ISqHOj1WEVwCS/SkUQZTyVJQMvD5I2dON8EPkvl09EcxNbGkepXy7aH+uh8KQsYVFnU/3HrgF1LozKfet7KQSok0hhlBvmBylQIDAQAB
+
+# 当前服务的ip端口
+local:
+  host: http://192.168.31.73:9168/
+
+# AI 客服：FAISS 检索 + 推理（二选一）
+# （1）与「对话」页 OpenAI 兼容源一致：填 completion-base-url（通常以 /v1 结尾）、completion-model；
+# （2）本机 subprocess：填 llama-exe、model-path（.gguf）
+ai:
+  chat:
+    completion-base-url: ""
+    completion-api-key: ""
+    completion-model: ""
+    completion-temperature: 0.7
+    completion-connect-timeout-ms: 15000
+    completion-read-timeout-ms: 180000
+    llama-exe: ""
+    model-path: ""
+    max-tokens: 256
+    faq-file: classpath:data/faq.txt
+    rag-limit: 3
+    process-timeout-seconds: 300
+    retrieval-enabled: true
+    retrieval-base-url: http://127.0.0.1:9170
+    retrieval-connect-timeout-ms: 5000
+    retrieval-read-timeout-ms: 120000
+    # 与 Python 默认一致时，导入话术后 FAISS reload 可读到同文件（见 retrieval-service main.py）
+    user-faq-path: ${user.home}/.px-claw/faq.txt
+
+# 邮件渠道：IMAP 拉取 → AI 建议回复 → 人工审核后 SMTP 发出（详见 system/README.md）
+mail:
+  inbound:
+    enabled: false
+    host: ${MAIL_IMAP_HOST:imap.example.com}
+    port: ${MAIL_IMAP_PORT:993}
+    username: ${MAIL_IMAP_USER:}
+    password: ${MAIL_IMAP_PASSWORD:}
+    folder: INBOX
+    ssl: true
+    poll-interval-ms: 60000
+    max-batch-per-poll: 20
+  smtp:
+    enabled: false
+    host: ${MAIL_SMTP_HOST:smtp.example.com}
+    port: ${MAIL_SMTP_PORT:587}
+    username: ${MAIL_SMTP_USER:}
+    password: ${MAIL_SMTP_PASSWORD:}
+    ssl: false
+    starttls: true
+    from-address: ${MAIL_FROM:noreply@example.com}
+

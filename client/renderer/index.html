@@ -1,0 +1,3459 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>PX-Claw</title>
+    <style>
+        :root {
+            --bg: #f0f2f5;
+            --surface: #fff;
+            --border: #e4e6eb;
+            --text: #1a1a1a;
+            --text-muted: #6b7280;
+            --user-bubble: #2563eb;
+            --user-bubble-text: #fff;
+            --asst-bubble: #fff;
+            --asst-border: #e5e7eb;
+            --error: #b91c1c;
+            --radius: 12px;
+            --shadow: 0 1px 2px rgba(0,0,0,.06);
+            --nav-rail: #e8eaef;
+            --nav-active: #2563eb;
+            --nav-active-bg: #eff6ff;
+        }
+
+        * { box-sizing: border-box; }
+
+        html, body {
+            height: 100%;
+            margin: 0;
+            font-family: system-ui, -apple-system, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif;
+            font-size: 15px;
+            line-height: 1.5;
+            color: var(--text);
+            background: var(--bg);
+        }
+
+        .app-shell {
+            display: flex;
+            height: 100%;
+            width: 100%;
+            min-width: 0;
+        }
+
+        /* 左侧主菜单：对话 / AI 客服 / 模型配置 */
+        .nav-rail {
+            width: 72px;
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: stretch;
+            gap: 4px;
+            padding: 12px 8px;
+            background: var(--nav-rail);
+            border-right: 1px solid var(--border);
+            height: 100%;
+            min-height: 0;
+        }
+
+        .nav-rail__top {
+            display: flex;
+            flex-direction: column;
+            align-items: stretch;
+            gap: 4px;
+            flex: 1;
+            min-height: 0;
+        }
+
+        .nav-rail__user {
+            flex-shrink: 0;
+            margin-top: 8px;
+            padding-top: 8px;
+            border-top: 1px solid rgba(0, 0, 0, 0.08);
+        }
+
+        .nav-rail__user-btn {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            width: 100%;
+            min-height: 56px;
+            padding: 8px 4px;
+            border: none;
+            border-radius: 10px;
+            background: transparent;
+            color: var(--text-muted);
+            font-size: 11px;
+            font-weight: 500;
+            cursor: pointer;
+            line-height: 1.2;
+        }
+
+        .nav-rail__user-btn:hover {
+            background: rgba(0, 0, 0, 0.05);
+            color: var(--text);
+        }
+
+        .nav-rail__user-avatar {
+            position: relative;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            overflow: hidden;
+            background: linear-gradient(145deg, #a5b4fc, #6366f1);
+            color: #fff;
+            font-size: 13px;
+            font-weight: 600;
+            flex-shrink: 0;
+        }
+
+        .nav-rail__user-avatar-img {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: none;
+        }
+
+        .nav-rail__user-avatar-img.is-visible {
+            display: block;
+        }
+
+        .nav-rail__user-avatar-fallback {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            line-height: 1;
+            background: linear-gradient(145deg, #a5b4fc, #6366f1);
+            color: #fff;
+        }
+
+        .nav-rail__user-avatar-fallback.is-hidden {
+            display: none;
+        }
+
+        .nav-rail__user-label {
+            font-size: 10px;
+            max-width: 100%;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .nav-rail__btn {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            min-height: 64px;
+            padding: 8px 4px;
+            border: none;
+            border-radius: 10px;
+            background: transparent;
+            color: var(--text-muted);
+            font-size: 11px;
+            font-weight: 500;
+            cursor: pointer;
+            line-height: 1.2;
+        }
+
+        .nav-rail__btn:hover {
+            background: rgba(0,0,0,.05);
+            color: var(--text);
+        }
+
+        .nav-rail__btn[aria-pressed="true"] {
+            background: var(--nav-active-bg);
+            color: var(--nav-active);
+        }
+
+        .nav-rail__icon {
+            line-height: 0;
+        }
+
+        .nav-rail__icon svg {
+            width: 24px;
+            height: 24px;
+        }
+
+        .content {
+            flex: 1;
+            min-width: 0;
+            min-height: 0;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /** 对话 + AI 客服：侧栏与主区横向排列；模型配置页单独全宽 */
+        .workspace-split {
+            flex: 1;
+            min-height: 0;
+            display: flex;
+            flex-direction: row;
+            min-width: 0;
+        }
+
+        .workspace-split[hidden] {
+            display: none !important;
+        }
+
+        .workspace-main {
+            flex: 1;
+            min-width: 0;
+            min-height: 0;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        .workspace-main > .view {
+            position: absolute;
+            inset: 0;
+            overflow: hidden;
+        }
+
+        /* 覆写 .view 默认：工作区内的两页用绝对定位叠放，由 .view--active 控制显示 */
+        .workspace-main > .view:not(.view--active) {
+            display: none !important;
+            visibility: hidden;
+        }
+
+        .workspace-main > .view.view--active {
+            display: flex !important;
+            visibility: visible;
+            flex-direction: column;
+        }
+
+        .view--settings-outer {
+            flex: 1;
+            min-height: 0;
+        }
+
+        .view--settings-outer:not(.view--active) {
+            display: none !important;
+        }
+
+        .view--settings-outer.view--active {
+            display: flex !important;
+            flex-direction: column;
+        }
+
+        .view {
+            display: none;
+            flex: 1;
+            min-height: 0;
+            flex-direction: row;
+        }
+
+        .view--active { display: flex; }
+
+        /* 对话：左侧会话列表 + 右侧聊天 */
+        .conv-sidebar {
+            width: 260px;
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            background: var(--surface);
+            border-right: 1px solid var(--border);
+        }
+
+        .conv-sidebar__head {
+            padding: 12px 12px 8px;
+        }
+
+        .btn-new-chat {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px dashed var(--border);
+            border-radius: 10px;
+            background: #fafafa;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            color: var(--nav-active);
+        }
+
+        .btn-new-chat:hover:not(:disabled) {
+            background: #eff6ff;
+            border-color: #93c5fd;
+        }
+
+        .btn-new-chat:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .conv-search-wrap {
+            padding: 0 8px 8px 8px;
+        }
+
+        .conv-search {
+            width: 100%;
+            box-sizing: border-box;
+            padding: 8px 10px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font: inherit;
+            font-size: 13px;
+            background: #fafafa;
+        }
+
+        .conv-search:focus {
+            outline: none;
+            border-color: #93c5fd;
+            box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.12);
+        }
+
+        .conv-search::placeholder {
+            color: #9ca3af;
+        }
+
+        .conv-sidebar__label {
+            font-size: 12px;
+            color: var(--text-muted);
+            margin: 12px 12px 6px;
+        }
+
+        .conv-list {
+            flex: 1;
+            min-height: 0;
+            overflow-y: auto;
+            padding: 0 4px 12px 8px;
+        }
+
+        .conv-list-empty {
+            margin: 8px 8px 0;
+            font-size: 12px;
+            color: var(--text-muted);
+            text-align: center;
+        }
+
+        .conv-item {
+            width: 100%;
+            text-align: left;
+            padding: 10px 10px;
+            margin-bottom: 4px;
+            border: 1px solid transparent;
+            border-radius: 8px;
+            background: transparent;
+            font-size: 13px;
+            color: var(--text);
+            cursor: pointer;
+            display: block;
+        }
+
+        .conv-item:hover {
+            background: #f3f4f6;
+        }
+
+        .conv-item[aria-current="true"] {
+            background: var(--nav-active-bg);
+            border-color: #bfdbfe;
+        }
+
+        .conv-item:disabled {
+            opacity: 0.55;
+            cursor: not-allowed;
+        }
+
+        .conv-item__title {
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            word-break: break-word;
+        }
+
+        .conv-item__title[title] {
+            cursor: text;
+        }
+
+        .conv-item__time {
+            font-size: 11px;
+            color: var(--text-muted);
+            margin-top: 4px;
+            line-height: 1.35;
+            white-space: normal;
+            word-break: break-all;
+        }
+
+        .chat-empty {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 120px;
+            margin: 24px 8px 32px;
+            padding: 20px 16px;
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .chat-empty__hint {
+            display: block;
+            margin-top: 10px;
+            font-size: 13px;
+        }
+
+        .chat-empty kbd {
+            display: inline-block;
+            margin: 0 2px;
+            padding: 1px 6px;
+            font-size: 12px;
+            font-family: inherit;
+            background: #e5e7eb;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+        }
+
+        .chat-workspace {
+            flex: 1;
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            align-self: stretch;
+        }
+
+        .toolbar {
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px 16px;
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            box-shadow: var(--shadow);
+        }
+
+        .toolbar label {
+            font-size: 13px;
+            color: var(--text-muted);
+            white-space: nowrap;
+        }
+
+        #active-provider {
+            flex: 1;
+            min-width: 0;
+            max-width: 280px;
+            padding: 8px 10px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            background: #fafafa;
+            font-size: 14px;
+        }
+
+        #settings-panel {
+            display: block;
+        }
+
+        .view-settings {
+            flex: 1;
+            min-width: 0;
+            min-height: 0;
+            overflow-y: auto;
+        }
+
+        .view-settings__inner {
+            max-width: 640px;
+            margin: 0 auto;
+            padding: 20px 16px 32px;
+        }
+
+        .view-settings__inner h2 {
+            margin: 0 0 12px;
+            font-size: 18px;
+        }
+
+        .view-settings__inner .hint:first-of-type {
+            margin-top: 0;
+        }
+
+        .prov-card h3 { margin: 0 0 8px; font-size: 15px; }
+        .prov-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 10px; margin-bottom: 10px; }
+        .row { margin: 6px 0; }
+        .row label { display: block; font-size: 12px; color: var(--text-muted); }
+        .row input { width: 100%; max-width: 480px; padding: 6px 8px; box-sizing: border-box; }
+        .hint { font-size: 12px; color: var(--text-muted); }
+        #save-cfg { margin-top: 4px; padding: 6px 14px; border-radius: 8px; border: 1px solid var(--border); cursor: pointer; }
+        #save-cfg:hover { background: #f9fafb; }
+
+        .mail-fieldset { border: 1px solid var(--border); border-radius: 10px; padding: 12px; margin: 14px 0; }
+        .mail-fieldset legend { padding: 0 6px; font-size: 13px; font-weight: 600; }
+        .mail-grid { display: grid; grid-template-columns: 130px 1fr; gap: 8px 12px; align-items: center; max-width: 540px; }
+        .mail-grid label { font-size: 12px; color: var(--text-muted); }
+        .mail-grid input[type="text"],
+        .mail-grid input[type="number"],
+        .mail-grid input[type="password"],
+        .mail-grid select {
+            width: 100%; padding: 6px 8px; box-sizing: border-box; border: 1px solid var(--border); border-radius: 6px; font: inherit;
+        }
+        .mail-row-check { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+        .mail-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px; align-items: center; }
+        .mail-actions button { padding: 6px 14px; border-radius: 8px; border: 1px solid var(--border); cursor: pointer; background: var(--surface); font: inherit; }
+        .mail-actions button:hover { background: #f9fafb; }
+        .mail-contacts-wrap { max-width: 640px; margin-top: 6px; }
+        .mail-contacts-wrap .hint { font-size: 12px; line-height: 1.5; margin: 0 0 10px; color: var(--text-muted); }
+        .mail-contacts-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        .mail-contacts-table th,
+        .mail-contacts-table td { border: 1px solid var(--border); padding: 6px 8px; vertical-align: middle; }
+        .mail-contacts-table th { text-align: left; background: var(--surface); font-weight: 600; }
+        .mail-contacts-table input { width: 100%; box-sizing: border-box; padding: 6px 8px; border: 1px solid var(--border); border-radius: 6px; font: inherit; }
+        .mail-contact-del { padding: 4px 10px; border-radius: 6px; border: 1px solid var(--border); cursor: pointer; background: var(--surface); font: inherit; font-size: 12px; }
+        .mail-contact-del:hover { background: #f9fafb; }
+        #mail-contact-add { margin-top: 10px; padding: 6px 14px; border-radius: 8px; border: 1px solid var(--border); cursor: pointer; background: var(--surface); font: inherit; }
+        #mail-contact-add:hover { background: #f9fafb; }
+        #mail-queue { margin-top: 20px; display: flex; flex-direction: column; gap: 12px; }
+        .mail-card { border: 1px solid var(--border); border-radius: 10px; padding: 12px; background: var(--surface); }
+        .mail-card__meta { font-size: 12px; color: var(--text-muted); margin-bottom: 8px; line-height: 1.4; }
+        .mail-card textarea { width: 100%; min-height: 100px; box-sizing: border-box; padding: 8px; font: inherit; border: 1px solid var(--border); border-radius: 8px; }
+        .mail-card__err { color: var(--error); font-size: 12px; margin: 6px 0; }
+        .mail-card__btns { margin-top: 8px; display: flex; gap: 8px; flex-wrap: wrap; }
+        .mail-card--done { opacity: 0.65; }
+
+        .mail-tutorial {
+            margin: 14px 0 18px;
+            padding: 14px 16px;
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            font-size: 13px;
+            line-height: 1.55;
+            max-width: 640px;
+            color: var(--text);
+        }
+        .mail-tutorial h4 {
+            margin: 0 0 10px;
+            font-size: 14px;
+            font-weight: 600;
+        }
+        .mail-tutorial ol { margin: 0 0 0 1.25em; padding: 0; }
+        .mail-tutorial li { margin: 8px 0; }
+        .mail-tutorial code {
+            font-size: 12px;
+            background: rgba(0, 0, 0, 0.06);
+            padding: 1px 5px;
+            border-radius: 4px;
+            word-break: break-all;
+        }
+        .mail-tutorial .mail-tutorial-note {
+            margin-top: 12px;
+            padding-top: 10px;
+            border-top: 1px dashed var(--border);
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        #chat {
+            flex: 1;
+            min-height: 0;
+            overflow-y: auto;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .msg { display: flex; flex-direction: column; max-width: 92%; }
+        .msg--user { align-self: flex-end; align-items: flex-end; }
+        .msg--assistant, .msg--error, .msg--hint { align-self: flex-start; }
+
+        .msg-bubble {
+            padding: 10px 14px;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+        .msg--user .msg-bubble {
+            background: var(--user-bubble);
+            color: var(--user-bubble-text);
+            border-bottom-right-radius: 4px;
+        }
+        .msg--assistant .msg-bubble {
+            background: var(--asst-bubble);
+            border: 1px solid var(--asst-border);
+            border-bottom-left-radius: 4px;
+        }
+        .msg--error .msg-bubble {
+            background: #fef2f2;
+            color: var(--error);
+            border: 1px solid #fecaca;
+        }
+        .msg--hint .msg-bubble {
+            background: #f3f4f6;
+            color: var(--text-muted);
+            font-size: 13px;
+            border: 1px dashed var(--border);
+        }
+
+        .msg-meta {
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-bottom: 4px;
+            padding: 0 2px;
+        }
+
+        .msg-asst-stack {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            max-width: 100%;
+        }
+        .msg-thinking {
+            margin: 0;
+            border-radius: var(--radius);
+            border: 1px solid var(--border);
+            background: #f9fafb;
+            font-size: 12px;
+            align-self: flex-start;
+            max-width: 100%;
+        }
+        .msg-thinking summary {
+            cursor: pointer;
+            list-style: none;
+            padding: 6px 10px;
+            color: var(--text-muted);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: min(100%, 92vw);
+            user-select: none;
+        }
+        .msg-thinking summary::-webkit-details-marker { display: none; }
+        .msg-thinking summary::before {
+            content: '▸ ';
+            display: inline;
+            opacity: 0.7;
+        }
+        .msg-thinking[open] summary::before { content: '▾ '; }
+        .msg-thinking__body {
+            margin: 0;
+            padding: 8px 10px 10px;
+            border-top: 1px dashed var(--border);
+            white-space: pre-wrap;
+            word-break: break-word;
+            font-family: inherit;
+            font-size: 12px;
+            color: var(--text-muted);
+            max-height: 240px;
+            overflow-y: auto;
+        }
+
+        .typing .msg-bubble { display: flex; align-items: center; gap: 6px; min-height: 40px; flex-wrap: wrap; }
+        .typing-generating {
+            font-size: 13px;
+            color: var(--text-muted);
+        }
+        .typing-dots span {
+            display: inline-block;
+            width: 6px; height: 6px; border-radius: 50%;
+            background: #9ca3af;
+            animation: bounce 1.2s ease-in-out infinite;
+        }
+        .typing-dots span:nth-child(2) { animation-delay: 0.2s; }
+        .typing-dots span:nth-child(3) { animation-delay: 0.4s; }
+        @keyframes bounce { 0%, 80%, 100% { opacity: .3; } 40% { opacity: 1; } }
+
+        .composer {
+            flex-shrink: 0;
+            position: relative;
+            z-index: 2;
+            display: flex;
+            gap: 10px;
+            align-items: flex-end;
+            padding: 12px 16px 16px;
+            background: var(--surface);
+            border-top: 1px solid var(--border);
+        }
+
+        .composer__main {
+            flex: 1;
+            min-width: 0;
+            display: flex;
+            gap: 8px;
+            align-items: flex-end;
+        }
+
+        .composer-attach {
+            position: relative;
+            flex-shrink: 0;
+        }
+
+        .composer-attach__btn {
+            width: 44px;
+            height: 44px;
+            padding: 0;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            background: var(--surface);
+            font-size: 22px;
+            font-weight: 300;
+            line-height: 1;
+            cursor: pointer;
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .composer-attach__btn:hover {
+            background: #f3f4f6;
+            color: var(--text);
+        }
+
+        .composer-attach__btn[aria-expanded="true"] {
+            border-color: #93c5fd;
+            color: #2563eb;
+        }
+
+        .composer-attach-menu {
+            position: absolute;
+            bottom: calc(100% + 8px);
+            left: 0;
+            min-width: 188px;
+            padding: 6px;
+            background: #fff;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            box-shadow: 0 10px 28px rgba(15, 23, 42, 0.14);
+            z-index: 60;
+        }
+
+        .composer-attach-menu__item {
+            display: block;
+            width: 100%;
+            text-align: left;
+            padding: 10px 12px;
+            border: none;
+            border-radius: 8px;
+            background: transparent;
+            font: inherit;
+            font-size: 14px;
+            cursor: pointer;
+            color: var(--text);
+        }
+
+        .composer-attach-menu__item:hover {
+            background: #f3f4f6;
+        }
+
+        .composer-attach-menu__hint {
+            padding: 8px 10px 4px;
+            font-size: 11px;
+            color: var(--text-muted);
+            line-height: 1.35;
+        }
+
+        #input {
+            flex: 1;
+            min-width: 0;
+            min-height: 44px;
+            max-height: 120px;
+            padding: 10px 14px;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            font: inherit;
+            line-height: 1.4;
+            resize: none;
+        }
+        #input:focus { outline: none; border-color: #93c5fd; box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15); }
+        #input:disabled { background: #f3f4f6; color: #9ca3af; }
+
+        #send-btn {
+            min-width: 80px;
+            padding: 0 18px;
+            border: none;
+            border-radius: 10px;
+            background: var(--user-bubble);
+            color: #fff;
+            font-size: 15px;
+            font-weight: 500;
+            cursor: pointer;
+        }
+        #send-btn:hover:not(:disabled) { background: #1d4ed8; }
+        #send-btn:disabled { background: #93c5fd; cursor: not-allowed; }
+
+        .view--ai-cs {
+            flex-direction: column;
+        }
+
+        .view-ai-cs-inner {
+            flex: 1;
+            min-height: 0;
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            align-self: stretch;
+            padding: 0 12px 12px;
+            box-sizing: border-box;
+        }
+
+        /* AI 客服：话术知识库检索 + 当前模型应答 */
+        .view-ai-cs-inner .ai-cs {
+            flex: 1;
+            min-height: 0;
+            max-height: none;
+            display: flex;
+            flex-direction: column;
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            margin-top: 8px;
+            background: var(--surface);
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06), 0 8px 24px rgba(15, 23, 42, 0.06);
+            overflow: visible;
+        }
+
+        .ai-cs {
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+        }
+        .ai-cs__head {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            padding: 14px 16px 14px;
+            border-bottom: 1px solid var(--border);
+            background: linear-gradient(180deg, #f8fafc 0%, var(--surface) 100%);
+        }
+        .ai-cs__lead {
+            width: 100%;
+        }
+        .ai-cs__title-wrap {
+            display: inline-flex;
+            align-items: center;
+            flex-wrap: nowrap;
+            gap: 6px;
+            min-width: 0;
+        }
+        .ai-cs__title {
+            font-weight: 700;
+            font-size: 17px;
+            letter-spacing: -0.02em;
+            margin: 0;
+            padding: 0;
+            color: var(--text);
+            line-height: 22px;
+            display: inline-flex;
+            align-items: center;
+        }
+        .ai-cs__tag {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            height: 22px;
+            padding: 0 9px;
+            box-sizing: border-box;
+            border-radius: 999px;
+            font-size: 11px;
+            font-weight: 600;
+            line-height: 1;
+            color: #1d4ed8;
+            background: #dbeafe;
+            border: 1px solid #bfdbfe;
+        }
+        /* 「?」使用说明（折叠），展开为浮层不占满宽顶栏 */
+        .ai-cs__help {
+            position: relative;
+            flex-shrink: 0;
+        }
+        .ai-cs__help > summary.ai-cs__help-sum {
+            list-style: none;
+            cursor: pointer;
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0;
+            padding: 0;
+            font-size: 12px;
+            font-weight: 700;
+            line-height: 1;
+            color: #2563eb;
+            background: #eff6ff;
+            border: 1px solid #bfdbfe;
+            transition: background 0.15s ease, transform 0.1s ease;
+        }
+        .ai-cs__help > summary.ai-cs__help-sum::-webkit-details-marker {
+            display: none;
+        }
+        .ai-cs__help > summary.ai-cs__help-sum:hover {
+            background: #dbeafe;
+        }
+        .ai-cs__help[open] > summary.ai-cs__help-sum {
+            background: #2563eb;
+            color: #fff;
+            border-color: #1d4ed8;
+            box-shadow: 0 1px 4px rgba(37, 99, 235, 0.35);
+        }
+        .ai-cs__help-panel {
+            position: absolute;
+            left: 0;
+            top: calc(100% + 6px);
+            z-index: 80;
+            min-width: 260px;
+            max-width: min(380px, calc(100vw - 56px));
+            padding: 12px 14px;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            background: #fff;
+            box-shadow: 0 10px 30px rgba(15, 23, 42, 0.12), 0 2px 8px rgba(15, 23, 42, 0.06);
+        }
+        .ai-cs__help-panel::before {
+            content: "";
+            position: absolute;
+            left: 10px;
+            top: -6px;
+            width: 12px;
+            height: 12px;
+            background: #fff;
+            border-left: 1px solid var(--border);
+            border-top: 1px solid var(--border);
+            transform: rotate(45deg);
+            z-index: 1;
+        }
+        .ai-cs__help-intro {
+            margin: 0 0 10px;
+            font-size: 12px;
+            line-height: 1.55;
+            color: var(--text-muted);
+        }
+        .ai-cs__help-excel {
+            margin: 0;
+            padding-top: 10px;
+            border-top: 1px solid #e5e7eb;
+            font-size: 11px;
+            line-height: 1.55;
+            color: var(--text-muted);
+        }
+        .ai-cs__help-heading {
+            display: block;
+            font-weight: 600;
+            font-size: 11px;
+            color: var(--text);
+            margin-bottom: 4px;
+            letter-spacing: 0.02em;
+        }
+        .ai-cs__toolbar {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: flex-end;
+            gap: 10px 14px;
+        }
+        .ai-cs__field-grp {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        .ai-cs__model-label { font-size: 12px; font-weight: 500; color: var(--text-muted); white-space: nowrap; }
+        .ai-cs__provider {
+            min-width: 160px;
+            max-width: min(260px, 100%);
+            padding: 6px 10px;
+            border-radius: 9px;
+            border: 1px solid var(--border);
+            background: #fff;
+            font: inherit;
+            font-size: 13px;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+        }
+        .ai-cs__actions {
+            display: inline-flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-left: auto;
+        }
+        .ai-cs__head-row {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 12px;
+            width: 100%;
+        }
+        .ai-cs__head-row .ai-cs__lead {
+            flex: 1;
+            min-width: 0;
+        }
+        .ai-cs__btn-mgmt {
+            flex-shrink: 0;
+            padding: 7px 14px;
+            border-radius: 9px;
+            border: 1px solid #2563eb;
+            background: linear-gradient(180deg, #3b82f6 0%, #2563eb 100%);
+            color: #fff;
+            font: inherit;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 1px 3px rgba(37, 99, 235, 0.35);
+            white-space: nowrap;
+        }
+        .ai-cs__btn-mgmt:hover:not(:disabled) {
+            filter: brightness(1.06);
+            border-color: #1d4ed8;
+        }
+        .script-mgmt-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.45);
+            backdrop-filter: blur(4px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1100;
+            padding: 20px;
+        }
+        .script-mgmt-overlay.is-open {
+            display: flex;
+        }
+        .script-mgmt-shell {
+            position: relative;
+            width: 100%;
+            max-width: 880px;
+            max-height: calc(100vh - 48px);
+            display: flex;
+            flex-direction: column;
+            background: var(--surface);
+            border-radius: 16px;
+            box-shadow:
+                0 25px 50px -12px rgba(0, 0, 0, 0.22),
+                0 0 0 1px rgba(0, 0, 0, 0.04);
+            overflow: hidden;
+        }
+        .script-mgmt-shell__hd {
+            padding: 18px 48px 14px 20px;
+            border-bottom: 1px solid var(--border);
+            background: linear-gradient(180deg, #f8fafc 0%, var(--surface) 100%);
+        }
+        .script-mgmt-shell__hd h2 {
+            margin: 0;
+            font-size: 17px;
+            font-weight: 700;
+            color: var(--text);
+            letter-spacing: -0.02em;
+        }
+        .script-mgmt-shell__sub {
+            margin: 6px 0 0;
+            font-size: 12px;
+            color: var(--text-muted);
+            line-height: 1.45;
+        }
+        .script-mgmt-close {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            z-index: 2;
+            width: 36px;
+            height: 36px;
+            border: none;
+            border-radius: 10px;
+            background: rgba(0, 0, 0, 0.06);
+            color: var(--text-muted);
+            font-size: 20px;
+            line-height: 1;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .script-mgmt-close:hover {
+            background: rgba(0, 0, 0, 0.1);
+            color: var(--text);
+        }
+        .script-mgmt-body {
+            padding: 14px 18px 18px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            min-height: 0;
+            flex: 1;
+            overflow: hidden;
+        }
+        .script-mgmt-toolbar {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 8px;
+        }
+        .script-mgmt-toolbar .ai-cs__btn {
+            margin: 0;
+        }
+        .script-mgmt-table-wrap {
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            overflow: auto;
+            max-height: min(52vh, 480px);
+            background: #fff;
+        }
+        .script-mgmt-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12px;
+        }
+        .script-mgmt-table thead th {
+            position: sticky;
+            top: 0;
+            z-index: 1;
+            background: #f1f5f9;
+            text-align: left;
+            padding: 8px 10px;
+            border-bottom: 1px solid var(--border);
+            font-weight: 600;
+            color: var(--text);
+            white-space: nowrap;
+        }
+        .script-mgmt-table tbody td {
+            padding: 8px 10px;
+            border-bottom: 1px solid #e5e7eb;
+            vertical-align: top;
+            color: var(--text);
+        }
+        .script-mgmt-table tbody tr:last-child td {
+            border-bottom: none;
+        }
+        .script-mgmt-table__cell--clip {
+            max-width: 140px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .script-mgmt-table__cell--wide {
+            max-width: 220px;
+        }
+        .script-mgmt-table__actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+        .script-mgmt-table__actions button {
+            padding: 4px 10px;
+            font-size: 12px;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            background: #fff;
+            cursor: pointer;
+        }
+        .script-mgmt-table__actions button:hover:not(:disabled) {
+            background: #f8fafc;
+        }
+        .script-mgmt-table__actions .is-danger {
+            color: #b91c1c;
+            border-color: #fecaca;
+        }
+        .script-mgmt-table__actions .is-danger:hover:not(:disabled) {
+            background: #fef2f2;
+        }
+        #ai-cs-scripts-empty {
+            margin: 0;
+            padding: 12px;
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 13px;
+        }
+        .script-mgmt-pagination {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 10px 14px;
+            margin-top: 2px;
+            padding-top: 10px;
+            border-top: 1px solid var(--border);
+        }
+        .script-mgmt-pagination__label {
+            font-size: 13px;
+            color: var(--text-muted);
+        }
+        .script-mgmt-pagination .ai-cs__btn:disabled {
+            opacity: 0.45;
+            cursor: not-allowed;
+        }
+        .script-mgmt-pane--edit .script-mgmt-field label {
+            display: block;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-muted);
+            margin-bottom: 4px;
+        }
+        .script-mgmt-pane--edit .script-mgmt-field textarea {
+            width: 100%;
+            min-height: 64px;
+            padding: 8px 10px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            font: inherit;
+            font-size: 13px;
+            box-sizing: border-box;
+            resize: vertical;
+        }
+        .script-mgmt-pane--edit .script-mgmt-field textarea:focus {
+            outline: none;
+            border-color: #93c5fd;
+            box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.12);
+        }
+        .script-mgmt-edit-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 8px;
+        }
+        .ai-cs__btn {
+            padding: 7px 14px;
+            border-radius: 9px;
+            border: 1px solid var(--border);
+            background: #fff;
+            font: inherit;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+        }
+        .ai-cs__btn:hover:not(:disabled) { background: #f8fafc; border-color: #cbd5e1; }
+        .ai-cs__btn-secondary { color: var(--text); }
+        .view-ai-cs-inner .ai-cs .ai-cs__msgs {
+            min-height: 0;
+        }
+
+        .ai-cs__msgs {
+            flex: 1;
+            min-height: 120px;
+            overflow-y: auto;
+            padding: 14px 16px 18px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            font-size: 14px;
+            line-height: 1.55;
+            background: #f1f5f9;
+            background-image: radial-gradient(ellipse at 50% 0%, rgba(59, 130, 246, 0.06) 0%, transparent 55%);
+        }
+        .ai-cs-msg {
+            max-width: 100%;
+        }
+        .ai-cs-msg__meta {
+            font-size: 11px;
+            color: var(--text-muted);
+            margin-bottom: 4px;
+            padding: 0 2px;
+        }
+        .ai-cs-msg__bubble {
+            display: inline-block;
+            max-width: min(560px, 100%);
+            padding: 11px 14px;
+            border-radius: 14px;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+        .ai-cs-msg--user { text-align: right; }
+        .ai-cs-msg--user .ai-cs-msg__meta {
+            text-align: right;
+        }
+        .ai-cs-msg--user .ai-cs-msg__bubble {
+            text-align: left;
+            margin-left: auto;
+            background: linear-gradient(165deg, #e0e7ff 0%, #c7d2fe 120%);
+            border: 1px solid rgba(99, 102, 241, 0.35);
+            box-shadow: 0 4px 12px rgba(79, 70, 229, 0.12);
+            border-bottom-right-radius: 4px;
+        }
+        .ai-cs-msg--assistant .ai-cs-msg__bubble {
+            background: #ffffff;
+            color: var(--text);
+            border: 1px solid #e2e8f0;
+            border-left: 3px solid #2563eb;
+            box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08);
+            border-bottom-left-radius: 4px;
+        }
+        .ai-cs-msg--hint .ai-cs-msg__bubble {
+            background: #fffbeb;
+            border: 1px dashed #fcd34d;
+            color: var(--text-muted);
+            font-size: 12px;
+            max-width: 100%;
+            box-shadow: none;
+            border-left: none;
+        }
+        .ai-cs-msg--loading-msg .ai-cs-msg__bubble {
+            font-style: italic;
+            opacity: 0.92;
+        }
+        .ai-cs__composer {
+            display: flex;
+            gap: 10px;
+            padding: 12px 16px 16px;
+            align-items: flex-end;
+            border-top: 1px solid var(--border);
+            background: var(--surface);
+            box-shadow: 0 -4px 12px rgba(15, 23, 42, 0.04);
+        }
+        #ai-cs-input {
+            flex: 1;
+            min-height: 44px;
+            max-height: 120px;
+            padding: 10px 12px;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            font: inherit;
+            font-size: 14px;
+            resize: vertical;
+            background: #fff;
+        }
+        #ai-cs-input:focus { outline: none; border-color: #93c5fd; box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12); }
+        #ai-cs-send {
+            flex-shrink: 0;
+            padding: 10px 18px;
+            border: none;
+            border-radius: 12px;
+            background: linear-gradient(180deg, #3b82f6 0%, #2563eb 100%);
+            color: #fff;
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            box-shadow: 0 2px 6px rgba(37, 99, 235, 0.35);
+        }
+        #ai-cs-send:hover:not(:disabled) { filter: brightness(1.05); }
+        #ai-cs-send:disabled { opacity: 0.5; cursor: not-allowed; box-shadow: none; }
+
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg: #1a1b1e;
+                --surface: #25262b;
+                --border: #373a40;
+                --text: #e9ecef;
+                --text-muted: #909296;
+                --asst-bubble: #2c2e33;
+                --asst-border: #373a40;
+                --nav-rail: #1f2023;
+                --nav-active-bg: #1e3a5f;
+            }
+            .btn-new-chat { background: #2c2e33; color: #93c5fd; border-color: var(--border); }
+            .btn-new-chat:hover:not(:disabled) { background: #1e3a5f; }
+            .conv-item:hover { background: #2c2e33; }
+            .chat-empty kbd { background: #373a40; }
+            .toolbar { background: var(--surface); }
+            #active-provider { background: #2c2e33; color: var(--text); }
+            .prov-card { background: #2c2e33; border-color: var(--border); }
+            .msg--assistant .msg-bubble { background: var(--asst-bubble); }
+            .msg-thinking { background: #2c2e33; border-color: var(--border); }
+            .msg-thinking__body { border-top-color: var(--border); }
+            .msg--hint .msg-bubble { background: #2c2e33; color: var(--text-muted); }
+            #input { background: #2c2e33; color: var(--text); border-color: var(--border); }
+            #input:focus { border-color: #4c6ef5; box-shadow: 0 0 0 3px rgba(79, 124, 255, 0.2); }
+            #input:disabled { background: #1a1b1e; }
+            .composer-attach__btn {
+                background: #2c2e33;
+                color: var(--text-muted);
+            }
+            .composer-attach__btn:hover {
+                background: #373a40;
+                color: var(--text);
+            }
+            .composer-attach__btn[aria-expanded="true"] {
+                border-color: #4c6ef5;
+                color: #93c5fd;
+            }
+            .composer-attach-menu {
+                background: var(--surface);
+                box-shadow: 0 10px 28px rgba(0, 0, 0, 0.35);
+            }
+            .composer-attach-menu__item:hover {
+                background: #373a40;
+            }
+            .conv-search { background: #2c2e33; color: var(--text); }
+            .view-ai-cs-inner .ai-cs {
+                background: linear-gradient(180deg, #25262b 0%, #1f2024 40%);
+                box-shadow:
+                    0 1px 2px rgba(0, 0, 0, 0.2),
+                    0 12px 32px rgba(0, 0, 0, 0.28);
+            }
+            .ai-cs__head {
+                background: linear-gradient(180deg, #2c2e33 0%, var(--surface) 100%);
+                border-bottom-color: var(--border);
+            }
+            .ai-cs__tag {
+                color: #93c5fd;
+                background: #1e3a5f;
+                border-color: #2563eb;
+            }
+            .ai-cs__help > summary.ai-cs__help-sum {
+                background: rgba(59, 130, 246, 0.12);
+                color: #93c5fd;
+                border-color: #2563eb;
+            }
+            .ai-cs__help > summary.ai-cs__help-sum:hover {
+                background: rgba(59, 130, 246, 0.2);
+            }
+            .ai-cs__help[open] > summary.ai-cs__help-sum {
+                background: #2563eb;
+                color: #fff;
+                border-color: #1d4ed8;
+            }
+            .ai-cs__help-panel {
+                background: #2c2e33;
+                border-color: #40454e;
+                box-shadow: 0 12px 36px rgba(0, 0, 0, 0.45);
+            }
+            .ai-cs__help-panel::before {
+                background: #2c2e33;
+                border-color: #40454e;
+            }
+            .ai-cs__help-intro,
+            .ai-cs__help-excel {
+                color: var(--text-muted);
+            }
+            .ai-cs__help-excel {
+                border-top-color: #40454e;
+            }
+            .ai-cs__provider {
+                background: #2c2e33;
+                color: var(--text);
+                border-color: var(--border);
+                box-shadow: none;
+            }
+            .ai-cs__btn-secondary {
+                background: #2c2e33;
+                color: var(--text);
+            }
+            .ai-cs__btn-secondary:hover:not(:disabled) {
+                background: #373a40;
+                border-color: #52525b;
+            }
+            .ai-cs__msgs {
+                background: #1a1b1f;
+                background-image: radial-gradient(ellipse at 50% 0%, rgba(79, 123, 255, 0.12) 0%, transparent 50%);
+            }
+            .ai-cs-msg--user .ai-cs-msg__bubble {
+                background: linear-gradient(165deg, #1e3a5f 0%, #173054 130%);
+                border-color: #2563eb;
+                box-shadow: 0 4px 14px rgba(37, 99, 235, 0.2);
+                color: #e5e7eb;
+            }
+            .ai-cs-msg--assistant .ai-cs-msg__bubble {
+                background: #2c2e33;
+                color: var(--text);
+                border-color: #40454e;
+                border-left-color: #4c82f6;
+                box-shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
+            }
+            .ai-cs-msg--hint .ai-cs-msg__bubble {
+                background: #374151;
+                border-color: #6b7280;
+                border-left-color: transparent;
+                color: #d1d5db;
+            }
+            #ai-cs-input {
+                background: #2c2e33;
+                color: var(--text);
+                border-color: var(--border);
+            }
+            #ai-cs-input:focus {
+                border-color: #4c6ef5;
+                box-shadow: 0 0 0 3px rgba(79, 124, 255, 0.22);
+            }
+            #ai-cs-send {
+                box-shadow:
+                    0 2px 8px rgba(37, 99, 235, 0.4);
+                background: linear-gradient(180deg, #2563eb 0%, #1d4ed8 100%);
+            }
+            #ai-cs-send:disabled {
+                box-shadow: none;
+                opacity: 0.48;
+            }
+        }
+
+        .ctx-menu {
+            position: fixed;
+            z-index: 10000;
+            min-width: 160px;
+            padding: 4px 0;
+            margin: 0;
+            list-style: none;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+        }
+
+        .ctx-menu[hidden] {
+            display: none !important;
+        }
+
+        .ctx-menu button {
+            display: block;
+            width: 100%;
+            text-align: left;
+            padding: 8px 14px;
+            border: none;
+            background: transparent;
+            font: inherit;
+            font-size: 13px;
+            color: var(--text);
+            cursor: pointer;
+        }
+
+        .ctx-menu button:hover:not(:disabled) {
+            background: #f3f4f6;
+        }
+
+        .ctx-menu button:disabled {
+            opacity: 0.45;
+            cursor: not-allowed;
+        }
+
+        .ctx-menu .ctx-menu__danger {
+            color: var(--error);
+        }
+
+        @media (prefers-color-scheme: dark) {
+            .ctx-menu button:hover:not(:disabled) { background: #2c2e33; }
+            .account-close {
+                background: rgba(255, 255, 255, 0.08);
+                color: var(--text-muted);
+            }
+            .account-close:hover {
+                background: rgba(255, 255, 255, 0.14);
+                color: var(--text);
+            }
+            .login-field input,
+            .login-field select,
+            .login-field textarea {
+                background: #2c2e33;
+                border-color: var(--border);
+                color: var(--text);
+            }
+            .account-readonly {
+                background: #2c2e33;
+                border-color: var(--border);
+            }
+            .profile-avatar-wrap {
+                border-color: #373a40;
+            }
+            .profile-actions-bar__btn--secondary:hover:not(:disabled) {
+                background: #2c2e33;
+            }
+            .profile-actions-bar__btn--quiet {
+                background: #25262b;
+                color: #94a3b8;
+                border-color: #3f3f46;
+            }
+            .profile-actions-bar__btn--quiet:hover:not(:disabled) {
+                background: #2c2e33;
+                color: #e2e8f0;
+            }
+            .avatar-crop-stage {
+                background: #09090b;
+            }
+            .login-actions button:hover:not(:disabled) {
+                background: #2c2e33;
+            }
+            .account-shell:has(#account-mode-profile:not([hidden])) {
+                background: #161618;
+                box-shadow: 0 12px 28px -10px rgba(0, 0, 0, 0.45);
+            }
+            .profile-identity__pwd-link {
+                color: #93c5fd;
+            }
+            .profile-identity__pwd-link:hover {
+                color: #bfdbfe;
+            }
+            .profile-identity__logout-btn:hover {
+                color: #e2e8f0;
+            }
+            .pwd-sheet__hint code {
+                background: #2c2e33;
+                color: var(--text-muted);
+            }
+            .btn-secondary:hover:not(:disabled) {
+                background: #2c2e33;
+            }
+            .pwd-close:hover {
+                background: #2c2e33;
+            }
+        }
+
+        .account-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.45);
+            backdrop-filter: blur(4px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            padding: 20px;
+        }
+
+        .account-overlay.is-open {
+            display: flex;
+        }
+
+        .account-shell {
+            position: relative;
+            width: 100%;
+            max-width: 560px;
+            max-height: calc(100vh - 40px);
+            overflow-y: auto;
+            background: var(--surface);
+            border-radius: 16px;
+            box-shadow:
+                0 25px 50px -12px rgba(0, 0, 0, 0.2),
+                0 0 0 1px rgba(0, 0, 0, 0.04);
+        }
+
+        /* 登录 / 注册视图收窄卡片（个人资料仍用上方 max-width） */
+        .account-shell:has(#account-mode-login:not([hidden])) {
+            max-width: 388px;
+        }
+
+        /* 个人资料：内层铺满外壳（不用 zoom，避免出现布局宽度与缩放不一致、里外「不是一个框」） */
+        .account-shell:has(#account-mode-profile:not([hidden])) {
+            max-width: 420px;
+            width: min(420px, calc(100vw - 40px));
+            background: #f1f5f9;
+            overflow: hidden;
+            box-shadow: 0 12px 28px -10px rgba(15, 23, 42, 0.14);
+        }
+
+        #account-mode-profile:not([hidden]) {
+            width: 100%;
+            max-width: none;
+            margin: 0;
+            box-sizing: border-box;
+        }
+
+        .account-close {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            z-index: 2;
+            width: 36px;
+            height: 36px;
+            border: none;
+            border-radius: 10px;
+            background: rgba(0, 0, 0, 0.06);
+            color: var(--text-muted);
+            font-size: 20px;
+            line-height: 1;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .account-close:hover {
+            background: rgba(0, 0, 0, 0.1);
+            color: var(--text);
+        }
+
+        .account-panel {
+            padding: 24px 24px 20px;
+        }
+
+        .account-panel[hidden] {
+            display: none !important;
+        }
+
+        .account-hero {
+            padding: 28px 24px 20px;
+            background: linear-gradient(135deg, #4f46e5 0%, #2563eb 48%, #0ea5e9 100%);
+            color: #fff;
+            border-radius: 16px 16px 0 0;
+            margin: 0;
+        }
+
+        .account-hero__title {
+            margin: 0 0 4px;
+            font-size: 20px;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+        }
+
+        .account-hero__sub {
+            margin: 0;
+            font-size: 13px;
+            opacity: 0.88;
+            line-height: 1.45;
+        }
+
+        .account-hero--compact {
+            padding: 18px 48px 18px 22px;
+        }
+
+        .account-hero--compact .account-hero__title {
+            font-size: 18px;
+        }
+
+        .account-hero--compact .account-hero__sub {
+            font-size: 12px;
+            margin-top: 4px;
+        }
+
+        .profile-panel-root {
+            padding: 0;
+        }
+
+        .profile-layout {
+            padding: 8px 10px 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            background: transparent;
+        }
+
+        /* 蓝色头部与白卡更近，退出登录更贴近蓝条底边观感 */
+        #account-mode-profile:not([hidden]) .account-hero--compact {
+            padding-bottom: 14px;
+        }
+
+        .profile-identity {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: flex-start;
+            gap: 8px;
+            padding: 8px 10px;
+            background: var(--surface);
+            border-radius: 14px;
+            border: 1px solid var(--border);
+            box-shadow: none;
+        }
+
+        .profile-identity__text {
+            flex: 1;
+            min-width: 140px;
+        }
+
+        .profile-identity__name {
+            font-size: 17px;
+            font-weight: 700;
+            color: var(--text);
+            letter-spacing: -0.02em;
+            line-height: 1.2;
+        }
+
+        /* 第一行：昵称 + 退出登录（紧贴蓝色头部下方）；第二行：说明 + 修改密码（中间约一行间距） */
+        .profile-identity__title-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            gap: 10px;
+        }
+
+        .profile-identity__meta-row {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            gap: 6px 12px;
+            margin-top: 14px;
+        }
+
+        .profile-identity__meta {
+            flex: 1;
+            min-width: 0;
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        .profile-identity__pwd-link {
+            flex-shrink: 0;
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--nav-active);
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        .profile-identity__pwd-link:hover {
+            text-decoration: underline;
+            color: #1d4ed8;
+        }
+
+        .profile-identity__logout-btn {
+            background: none;
+            border: none;
+            padding: 0;
+            margin: 0;
+            font: inherit;
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text-muted);
+            cursor: pointer;
+            text-decoration: none;
+            line-height: 1.35;
+            flex-shrink: 0;
+        }
+
+        .profile-identity__logout-btn:hover {
+            color: var(--text);
+            text-decoration: underline;
+            text-underline-offset: 2px;
+        }
+
+        .profile-identity__pwd-link.is-disabled,
+        .profile-identity__pwd-link[aria-disabled='true'] {
+            opacity: 0.45;
+            pointer-events: none;
+            cursor: not-allowed;
+            text-decoration: none;
+        }
+
+        /* 固定为常规头像尺寸，防止 img 固有宽高撑破整行 */
+        .profile-avatar-hit {
+            position: relative;
+            box-sizing: border-box;
+            width: 48px;
+            height: 48px;
+            min-width: 48px;
+            min-height: 48px;
+            max-width: 48px;
+            max-height: 48px;
+            flex-shrink: 0;
+            border: none;
+            padding: 0;
+            margin: 0;
+            overflow: hidden;
+            background: transparent;
+            cursor: pointer;
+            border-radius: 50%;
+            font-size: 0;
+            line-height: 0;
+            -webkit-appearance: none;
+            appearance: none;
+        }
+
+        .profile-avatar-hit:focus {
+            outline: none;
+        }
+
+        .profile-avatar-hit:focus-visible {
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.45);
+        }
+
+        .profile-avatar-hit:disabled {
+            cursor: not-allowed;
+            opacity: 0.65;
+        }
+
+        .profile-avatar-hit__mask {
+            position: absolute;
+            inset: 0;
+            border-radius: 50%;
+            background: rgba(15, 23, 42, 0.55);
+            color: #fff;
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: 0.02em;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity 0.15s ease;
+            pointer-events: none;
+        }
+
+        .profile-avatar-hit:hover:not(:disabled) .profile-avatar-hit__mask,
+        .profile-avatar-hit:focus-visible:not(:disabled) .profile-avatar-hit__mask {
+            opacity: 1;
+        }
+
+        .profile-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 12px 14px 12px;
+            box-shadow: none;
+        }
+
+        .profile-card__title {
+            margin: 0 0 12px;
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text);
+        }
+
+        /* 资料标题与保存同一行；保存按钮在 DOM 中位于表单之后，便于 Tab：先字段再保存 */
+        .profile-card--split-head {
+            display: grid;
+            grid-template-columns: 1fr auto;
+            align-items: center;
+            column-gap: 12px;
+            row-gap: 0;
+        }
+
+        .profile-card--split-head .profile-card__title {
+            grid-column: 1;
+            grid-row: 1;
+            margin: 0 0 10px;
+            align-self: center;
+        }
+
+        .profile-card--split-head #profile-save {
+            grid-column: 2;
+            grid-row: 1;
+            align-self: center;
+            margin-bottom: 10px;
+        }
+
+        .profile-card--split-head > .form-grid-2 {
+            grid-column: 1 / -1;
+            grid-row: 2;
+        }
+
+        /* 「保存资料」尽量贴近字号大小，弱化大块按钮感 */
+        .profile-card--split-head #profile-save.profile-actions-bar__btn {
+            padding: 1px 8px;
+            font-size: 12px;
+            font-weight: 500;
+            line-height: 1.45;
+            border-radius: 6px;
+            border-width: 1px;
+            box-shadow: none;
+        }
+
+        .profile-card--split-head #profile-save.profile-actions-bar__btn--primary:hover:not(:disabled) {
+            box-shadow: none;
+            filter: brightness(1.06);
+        }
+
+        .profile-link-btn {
+            background: none;
+            border: none;
+            padding: 8px 6px;
+            margin: 0;
+            font: inherit;
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--nav-active);
+            cursor: pointer;
+            text-decoration: underline;
+            text-underline-offset: 3px;
+        }
+
+        .profile-link-btn:hover:not(:disabled) {
+            color: #1d4ed8;
+        }
+
+        .profile-link-btn:disabled {
+            opacity: 0.45;
+            cursor: not-allowed;
+            text-decoration: none;
+        }
+
+        .pwd-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 1100;
+            background: rgba(15, 23, 42, 0.4);
+            backdrop-filter: blur(3px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+        }
+
+        .pwd-overlay.is-open {
+            display: flex;
+        }
+
+        .pwd-sheet {
+            position: relative;
+            width: 100%;
+            max-width: 380px;
+            max-height: calc(100vh - 32px);
+            overflow-y: auto;
+            background: var(--surface);
+            border-radius: 14px;
+            padding: 18px 18px 10px;
+            box-shadow:
+                0 20px 40px rgba(0, 0, 0, 0.18),
+                0 0 0 1px rgba(0, 0, 0, 0.05);
+        }
+
+        .pwd-sheet__title {
+            margin: 0 0 10px;
+            font-size: 17px;
+            font-weight: 700;
+        }
+
+        .pwd-sheet__hint {
+            margin: 0 0 10px;
+            font-size: 12px;
+            color: var(--text-muted);
+            line-height: 1.45;
+        }
+
+        .pwd-sheet__hint code {
+            font-size: 11px;
+            padding: 1px 5px;
+            border-radius: 4px;
+            background: #f1f5f9;
+            color: #475569;
+        }
+
+        .pwd-sheet__actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 10px;
+            margin-bottom: 0;
+            justify-content: flex-end;
+        }
+
+        .pwd-sheet__actions .pwd-close {
+            padding: 5px 12px;
+            border-radius: 8px;
+            font: inherit;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            border: 1px solid var(--border);
+            background: var(--surface);
+            color: var(--text);
+        }
+
+        .pwd-sheet__actions .btn-secondary {
+            padding: 5px 12px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 500;
+        }
+
+        .pwd-sheet .profile-msg {
+            margin-top: 6px;
+            min-height: 0;
+        }
+
+        .pwd-sheet .profile-msg:empty {
+            margin-top: 0;
+            min-height: 0;
+            display: none;
+        }
+
+        .pwd-close {
+            padding: 9px 14px;
+            border-radius: 10px;
+            font: inherit;
+            font-size: 14px;
+            cursor: pointer;
+            border: 1px solid var(--border);
+            background: var(--surface);
+            color: var(--text);
+        }
+
+        .pwd-close:hover {
+            background: #f8fafc;
+        }
+
+        .form-grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px 14px;
+        }
+
+        @media (max-width: 520px) {
+            .form-grid-2 {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .field-span-2 {
+            grid-column: 1 / -1;
+        }
+
+        .profile-avatar-wrap {
+            display: block;
+            position: relative;
+            box-sizing: border-box;
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            overflow: hidden;
+            flex-shrink: 0;
+            background: linear-gradient(145deg, #e0e7ff, #c7d2fe);
+            box-shadow: 0 2px 8px rgba(37, 99, 235, 0.22);
+            border: 2px solid #fff;
+        }
+
+        .profile-avatar-wrap img {
+            width: 100%;
+            height: 100%;
+            max-width: 48px;
+            max-height: 48px;
+            object-fit: cover;
+            object-position: center;
+            display: block;
+        }
+
+        .profile-avatar-fallback {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 17px;
+            font-weight: 700;
+            color: #4338ca;
+        }
+
+        .profile-avatar-fallback[hidden] {
+            display: none !important;
+        }
+
+        .btn-ghost {
+            padding: 8px 14px;
+            border-radius: 10px;
+            font: inherit;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            border: 1px solid rgba(255, 255, 255, 0.35);
+            background: rgba(255, 255, 255, 0.15);
+            color: #fff;
+        }
+
+        .btn-ghost:hover {
+            background: rgba(255, 255, 255, 0.28);
+        }
+
+        .account-body .btn-ghost {
+            border-color: var(--border);
+            background: var(--surface);
+            color: var(--nav-active);
+        }
+
+        .account-body .btn-ghost:hover {
+            background: var(--nav-active-bg);
+        }
+
+        .account-body {
+            padding: 0 24px 24px;
+        }
+
+        .account-body--flush {
+            padding: 0;
+        }
+
+        .form-grid {
+            display: grid;
+            gap: 14px;
+        }
+
+        .profile-actions-bar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            align-items: stretch;
+            justify-content: flex-start;
+            padding: 2px 0 0;
+        }
+
+        .profile-actions-bar--compact {
+            gap: 8px;
+            align-items: center;
+            padding: 0;
+        }
+
+        .profile-actions-bar--compact .profile-actions-bar__btn,
+        .profile-card--split-head .profile-actions-bar__btn {
+            flex: 0 1 auto;
+            width: auto;
+            min-width: 0;
+            padding: 3px 10px;
+            border-radius: 7px;
+            font-size: 13px;
+            font-weight: 500;
+            line-height: 1.35;
+            box-shadow: none;
+        }
+
+        .profile-actions-bar--compact .profile-actions-bar__btn--primary,
+        .profile-card--split-head .profile-actions-bar__btn--primary {
+            box-shadow: 0 1px 4px rgba(37, 99, 235, 0.25);
+        }
+
+        .profile-actions-bar--compact .profile-actions-bar__btn--primary:hover:not(:disabled),
+        .profile-card--split-head .profile-actions-bar__btn--primary:hover:not(:disabled) {
+            box-shadow: 0 2px 6px rgba(37, 99, 235, 0.35);
+        }
+
+        .profile-layout .profile-msg:empty {
+            display: none;
+            margin: 0;
+            min-height: 0;
+            padding: 0;
+        }
+
+
+        .profile-actions-bar__btn {
+            flex: 1 1 0;
+            min-width: 0;
+            padding: 10px 14px;
+            border-radius: 10px;
+            font: inherit;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            border: 1px solid transparent;
+            transition:
+                background 0.15s ease,
+                box-shadow 0.15s ease,
+                border-color 0.15s ease,
+                color 0.15s ease;
+        }
+
+        .profile-actions-bar__btn--primary {
+            background: linear-gradient(180deg, #3b82f6 0%, #2563eb 100%);
+            color: #fff;
+            border-color: #1d4ed8;
+            box-shadow: 0 2px 10px rgba(37, 99, 235, 0.35);
+        }
+
+        .profile-actions-bar__btn--primary:hover:not(:disabled) {
+            filter: brightness(1.03);
+            box-shadow: 0 4px 14px rgba(37, 99, 235, 0.45);
+        }
+
+        .profile-actions-bar__btn--secondary {
+            background: var(--surface);
+            color: var(--text);
+            border-color: var(--border);
+        }
+
+        .profile-actions-bar__btn--secondary:hover:not(:disabled) {
+            background: #f8fafc;
+            border-color: #cbd5e1;
+        }
+
+        .profile-actions-bar__btn--quiet {
+            background: #f8fafc;
+            color: #64748b;
+            border-color: #e2e8f0;
+        }
+
+        .profile-actions-bar__btn--quiet:hover:not(:disabled) {
+            background: #f1f5f9;
+            color: #475569;
+            border-color: #cbd5e1;
+        }
+
+        .profile-actions-bar__btn:disabled {
+            opacity: 0.55;
+            cursor: not-allowed;
+        }
+
+        .avatar-crop-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 2100;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            background: rgba(15, 23, 42, 0.55);
+            backdrop-filter: blur(5px);
+        }
+
+        .avatar-crop-overlay.is-open {
+            display: flex;
+        }
+
+        .avatar-crop-sheet {
+            width: 100%;
+            max-width: 360px;
+            background: var(--surface);
+            border-radius: 16px;
+            padding: 20px 20px 18px;
+            box-shadow:
+                0 24px 48px rgba(0, 0, 0, 0.22),
+                0 0 0 1px rgba(0, 0, 0, 0.06);
+        }
+
+        .avatar-crop-sheet__title {
+            margin: 0 0 6px;
+            font-size: 17px;
+            font-weight: 700;
+            color: var(--text);
+        }
+
+        .avatar-crop-sheet__hint {
+            margin: 0 0 14px;
+            font-size: 12px;
+            color: var(--text-muted);
+            line-height: 1.45;
+        }
+
+        .avatar-crop-stage {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 12px;
+            border-radius: 12px;
+            background: #0f172a;
+            padding: 12px;
+        }
+
+        #avatar-crop-canvas {
+            display: block;
+            border-radius: 50%;
+            cursor: grab;
+            touch-action: none;
+        }
+
+        #avatar-crop-canvas:active {
+            cursor: grabbing;
+        }
+
+        .avatar-crop-zoom-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 16px;
+        }
+
+        .avatar-crop-zoom-row label {
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--text-muted);
+            flex-shrink: 0;
+        }
+
+        .avatar-crop-zoom-row input[type='range'] {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .avatar-crop-sheet__actions {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+
+        .avatar-crop-sheet__cancel {
+            padding: 9px 16px;
+            border-radius: 10px;
+            font: inherit;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            border: 1px solid var(--border);
+            background: var(--surface);
+            color: var(--text);
+        }
+
+        .avatar-crop-sheet__cancel:hover {
+            background: #f8fafc;
+        }
+
+        .avatar-crop-sheet__ok {
+            padding: 9px 18px;
+            border-radius: 10px;
+            font: inherit;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            border: 1px solid #1d4ed8;
+            background: linear-gradient(180deg, #3b82f6 0%, #2563eb 100%);
+            color: #fff;
+        }
+
+        .avatar-crop-sheet__ok:hover:not(:disabled) {
+            filter: brightness(1.04);
+        }
+
+        .avatar-crop-sheet__ok:disabled {
+            opacity: 0.55;
+            cursor: not-allowed;
+        }
+
+        .btn-secondary {
+            padding: 9px 16px;
+            border-radius: 10px;
+            font: inherit;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            border: 1px solid var(--border);
+            background: var(--surface);
+            color: var(--text);
+        }
+
+        .btn-secondary:hover:not(:disabled) {
+            background: #f8fafc;
+        }
+
+        .btn-secondary:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .login-field {
+            margin-bottom: 0;
+        }
+
+        .login-field label {
+            display: block;
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--text-muted);
+            margin-bottom: 6px;
+        }
+
+        .login-field input,
+        .login-field select,
+        .login-field textarea {
+            width: 100%;
+            box-sizing: border-box;
+            padding: 10px 12px;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            font: inherit;
+            font-size: 14px;
+            background: #fafafa;
+            color: var(--text);
+        }
+
+        .login-field textarea {
+            min-height: 72px;
+            resize: vertical;
+        }
+
+        .login-field input:focus,
+        .login-field select:focus,
+        .login-field textarea:focus {
+            outline: none;
+            border-color: #93c5fd;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+        }
+
+        .login-hint {
+            font-size: 12px;
+            color: var(--text-muted);
+            margin: 0 0 16px;
+            line-height: 1.5;
+        }
+
+        .login-status {
+            font-size: 13px;
+            padding: 12px 14px;
+            border-radius: 10px;
+            background: #eff6ff;
+            color: #1e40af;
+            margin-bottom: 14px;
+            line-height: 1.45;
+        }
+
+        .login-actions {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-top: 18px;
+            align-items: center;
+        }
+
+        .login-actions button {
+            padding: 10px 16px;
+            border-radius: 10px;
+            font: inherit;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            border: 1px solid var(--border);
+            background: var(--surface);
+            color: var(--text);
+        }
+
+        .login-actions button:hover:not(:disabled) {
+            background: #f3f4f6;
+        }
+
+        .login-actions .btn-primary {
+            background: var(--nav-active);
+            color: #fff;
+            border-color: var(--nav-active);
+        }
+
+        .login-actions .btn-primary:hover:not(:disabled) {
+            background: #1d4ed8;
+            border-color: #1d4ed8;
+        }
+
+        .login-actions button:disabled {
+            opacity: 0.55;
+            cursor: not-allowed;
+        }
+
+        .login-msg {
+            font-size: 13px;
+            color: var(--error);
+            min-height: 20px;
+            margin-top: 12px;
+        }
+
+        .login-msg.is-ok {
+            color: #047857;
+        }
+
+        .profile-msg {
+            font-size: 13px;
+            min-height: 20px;
+            margin-top: 12px;
+        }
+
+        .profile-layout > .profile-msg:not(:empty) {
+            margin-top: 8px;
+            margin-bottom: 0;
+        }
+
+        .profile-msg.is-ok {
+            color: #047857;
+        }
+
+        .profile-msg.is-err {
+            color: var(--error);
+        }
+
+        .account-readonly {
+            font-size: 13px;
+            color: var(--text-muted);
+            padding: 10px 12px;
+            background: #f3f4f6;
+            border-radius: 10px;
+            border: 1px dashed var(--border);
+        }
+
+        /* PX-Claw 登录 / 注册 */
+        .erp-auth {
+            --erp-primary: #7b42f6;
+            --erp-primary-hover: #6935e0;
+            --erp-border: #e0e0e0;
+            --erp-placeholder: #999;
+            --erp-text: #1a1a1a;
+            --erp-muted: #6b7280;
+            --erp-sms-bg: #ede9fe;
+            padding: 0;
+            background: var(--surface);
+            border-radius: 16px;
+            overflow: hidden;
+        }
+
+        .erp-auth__panel {
+            padding: 22px 20px 20px;
+        }
+
+        .erp-auth__brand {
+            text-align: center;
+            margin-bottom: 18px;
+        }
+
+        .erp-auth__brand h2 {
+            margin: 0 0 8px;
+            font-size: 22px;
+            font-weight: 700;
+            color: var(--erp-text);
+            letter-spacing: -0.02em;
+        }
+
+        .erp-auth__brand p {
+            margin: 0;
+            font-size: 13px;
+            color: var(--erp-muted);
+            line-height: 1.45;
+        }
+
+        .erp-tabs {
+            display: flex;
+            gap: 28px;
+            margin-bottom: 18px;
+            border-bottom: 1px solid var(--erp-border);
+        }
+
+        .erp-tab {
+            padding: 10px 2px 12px;
+            margin-bottom: -1px;
+            border: none;
+            background: none;
+            font: inherit;
+            font-size: 15px;
+            font-weight: 500;
+            color: var(--erp-muted);
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+        }
+
+        .erp-tab:hover {
+            color: var(--erp-text);
+        }
+
+        .erp-tab.is-active {
+            color: var(--erp-primary);
+            border-bottom-color: var(--erp-primary);
+        }
+
+        .erp-pane[hidden] {
+            display: none !important;
+        }
+
+        /* 账号 / 手机登录切换时保留高度，避免外层白框伸缩（按手机登录三行计算） */
+        .erp-login-panes {
+            /* 44×3 + gap14×2 + stack 下边距 18，与手机登录块等高 */
+            min-height: 178px;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* 账号登录：在两行占位区内垂直居中，输入略收窄并水平居中 */
+        #erp-pane-password {
+            flex: 1 1 auto;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: stretch;
+            min-height: 0;
+        }
+
+        #erp-pane-password .erp-field-stack {
+            margin-bottom: 0;
+            width: 100%;
+            max-width: 300px;
+            align-self: center;
+        }
+
+        /* 手机登录：仍顶对齐铺满宽度 */
+        #erp-pane-mobile {
+            flex: 1 1 auto;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+            min-height: 0;
+        }
+
+        .erp-input {
+            width: 100%;
+            box-sizing: border-box;
+            height: 44px;
+            padding: 0 12px;
+            border: 1px solid var(--erp-border);
+            border-radius: 8px;
+            font: inherit;
+            font-size: 14px;
+            background: #fff;
+            color: var(--erp-text);
+        }
+
+        .erp-input::placeholder {
+            color: var(--erp-placeholder);
+        }
+
+        .erp-input:focus {
+            outline: none;
+            border-color: var(--erp-primary);
+            box-shadow: 0 0 0 3px rgba(123, 66, 246, 0.15);
+        }
+
+        .erp-field-stack {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            margin-bottom: 18px;
+        }
+
+        .erp-row-split {
+            display: flex;
+            gap: 10px;
+            align-items: stretch;
+        }
+
+        .erp-row-split__grow {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .erp-captcha-thumb {
+            flex-shrink: 0;
+            width: 118px;
+            height: 44px;
+            padding: 0;
+            border: 1px solid var(--erp-border);
+            border-radius: 8px;
+            overflow: hidden;
+            cursor: pointer;
+            background: #ede9fe;
+        }
+
+        .erp-captcha-thumb img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+
+        .erp-btn-sms {
+            flex-shrink: 0;
+            min-width: 108px;
+            height: 44px;
+            padding: 0 12px;
+            border: 1px solid rgba(123, 66, 246, 0.35);
+            border-radius: 8px;
+            background: var(--erp-sms-bg);
+            color: #4338ca;
+            font: inherit;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+
+        .erp-btn-sms:hover:not(:disabled) {
+            background: #ddd6fe;
+        }
+
+        .erp-btn-sms:disabled {
+            opacity: 0.55;
+            cursor: not-allowed;
+        }
+
+        .erp-btn-primary-lg {
+            width: 100%;
+            height: 46px;
+            margin-top: 4px;
+            border: none;
+            border-radius: 8px;
+            background: var(--erp-primary);
+            color: #fff;
+            font: inherit;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 4px 14px rgba(123, 66, 246, 0.35);
+        }
+
+        .erp-btn-primary-lg:hover:not(:disabled) {
+            background: var(--erp-primary-hover);
+        }
+
+        .erp-btn-primary-lg:disabled {
+            opacity: 0.55;
+            cursor: not-allowed;
+        }
+
+        .erp-auth-footer {
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 16px;
+        }
+
+        .erp-link {
+            border: none;
+            background: none;
+            padding: 0;
+            font: inherit;
+            font-size: 14px;
+            color: var(--erp-primary);
+            cursor: pointer;
+            text-decoration: none;
+        }
+
+        .erp-link:hover {
+            text-decoration: underline;
+        }
+
+        .erp-msg {
+            margin-top: 12px;
+            font-size: 13px;
+            min-height: 1.2em;
+        }
+
+        .erp-msg.is-err {
+            color: var(--error);
+        }
+
+        .erp-msg.is-ok {
+            color: #047857;
+        }
+
+        .erp-register__divider {
+            margin: 16px 0 14px;
+            border: none;
+            border-top: 1px solid var(--erp-border);
+        }
+
+        .erp-register-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+            margin-top: 8px;
+        }
+
+        .erp-btn-outline {
+            height: 40px;
+            padding: 0 18px;
+            border-radius: 8px;
+            border: 1px solid rgba(123, 66, 246, 0.45);
+            background: #fff;
+            color: #5b21b6;
+            font: inherit;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .erp-btn-outline:hover:not(:disabled) {
+            background: #faf5ff;
+        }
+
+        .erp-btn-register {
+            height: 40px;
+            padding: 0 22px;
+            border-radius: 8px;
+            border: none;
+            background: var(--erp-primary);
+            color: #fff;
+            font: inherit;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(123, 66, 246, 0.35);
+        }
+
+        .erp-btn-register:hover:not(:disabled) {
+            background: var(--erp-primary-hover);
+        }
+
+        .erp-auth .login-field label {
+            color: var(--erp-muted);
+        }
+
+        .erp-auth .login-field input {
+            border-color: rgba(123, 66, 246, 0.35);
+            background: #fff;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            .erp-auth {
+                --erp-border: #404040;
+                --erp-text: #e9ecef;
+                --erp-muted: #909296;
+                --erp-placeholder: #868e96;
+                --erp-sms-bg: #2c2640;
+            }
+            .erp-input {
+                background: #2c2e33;
+                border-color: var(--erp-border);
+                color: var(--erp-text);
+            }
+            .erp-captcha-thumb {
+                background: #2c2640;
+                border-color: var(--erp-border);
+            }
+            .erp-btn-outline {
+                background: var(--surface);
+                border-color: rgba(167, 139, 250, 0.5);
+                color: #c4b5fd;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="app-shell">
+    <nav class="nav-rail" aria-label="主菜单">
+        <div class="nav-rail__top">
+            <button type="button" class="nav-rail__btn" id="nav-chat" aria-pressed="true" title="对话 (Ctrl+N 新对话)">
+                <span class="nav-rail__icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8z"/>
+                    </svg>
+                </span>
+                对话
+            </button>
+            <button type="button" class="nav-rail__btn" id="nav-ai-cs" aria-pressed="false" title="AI 客服（知识库）">
+                <span class="nav-rail__icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M3 18v-6a9 9 0 0 1 18 0v6"/>
+                        <path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/>
+                    </svg>
+                </span>
+                AI客服
+            </button>
+            <button type="button" class="nav-rail__btn" id="nav-mail" aria-pressed="false" title="邮件（本机邮箱与建议回复）">
+                <span class="nav-rail__icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+                        <polyline points="22,6 12,13 2,6"/>
+                    </svg>
+                </span>
+                邮件
+            </button>
+            <button type="button" class="nav-rail__btn" id="nav-settings" aria-pressed="false" title="模型配置">
+                <span class="nav-rail__icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="3"/>
+                        <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+                    </svg>
+                </span>
+                模型
+            </button>
+        </div>
+        <div class="nav-rail__user">
+            <button type="button" class="nav-rail__user-btn" id="nav-user" title="平台账号与个人资料" aria-haspopup="dialog">
+                <span class="nav-rail__user-avatar" id="nav-user-avatar" aria-hidden="true">
+                    <img class="nav-rail__user-avatar-img" id="nav-user-avatar-img" alt="" width="32" height="32" />
+                    <span class="nav-rail__user-avatar-fallback" id="nav-user-avatar-fallback">?</span>
+                </span>
+                <span class="nav-rail__user-label" id="nav-user-label">登录</span>
+            </button>
+        </div>
+    </nav>
+
+    <div class="content">
+        <div id="workspace-split" class="workspace-split">
+            <aside class="conv-sidebar" aria-label="会话">
+                <div class="conv-sidebar__head">
+                    <button type="button" class="btn-new-chat" id="btn-new-chat" title="新建会话">+ 新会话</button>
+                </div>
+                <div class="conv-sidebar__label" id="conv-sidebar-label">会话历史</div>
+                <div class="conv-search-wrap">
+                    <input
+                        type="search"
+                        class="conv-search"
+                        id="conv-search"
+                        placeholder="搜索会话（标题与内容）"
+                        autocomplete="off"
+                        spellcheck="false"
+                        enterkeyhint="search"
+                    />
+                </div>
+                <div class="conv-list" id="conv-list" aria-label="历史会话列表"></div>
+            </aside>
+            <div class="workspace-main">
+                <div class="view view--chat view--active" id="view-chat" role="main">
+                    <div class="chat-workspace">
+                        <div class="toolbar">
+                            <label for="active-provider">当前模型</label>
+                            <select id="active-provider" title="选择对话使用的模型"></select>
+                        </div>
+                        <div id="chat" role="region" aria-label="对话消息"></div>
+                        <div class="composer">
+                            <div class="composer__main">
+                                <div class="composer-attach">
+                                    <button
+                                        type="button"
+                                        class="composer-attach__btn"
+                                        id="composer-attach-btn"
+                                        aria-label="更多操作"
+                                        aria-haspopup="menu"
+                                        aria-expanded="false"
+                                        aria-controls="composer-attach-menu"
+                                        title="发邮件、选择文件等"
+                                    >
+                                        +
+                                    </button>
+                                    <div
+                                        id="composer-attach-menu"
+                                        class="composer-attach-menu"
+                                        role="menu"
+                                        hidden
+                                    >
+                                        <button
+                                            type="button"
+                                            class="composer-attach-menu__item"
+                                            role="menuitem"
+                                            data-attach="mail"
+                                        >
+                                            发邮件
+                                        </button>
+                                        <button
+                                            type="button"
+                                            class="composer-attach-menu__item"
+                                            role="menuitem"
+                                            data-attach="file"
+                                        >
+                                            选择文件
+                                        </button>
+                                        <div class="composer-attach-menu__hint">
+                                            菜单项可随版本扩展
+                                        </div>
+                                    </div>
+                                </div>
+                                <textarea id="input" rows="1" placeholder="发消息，Enter 发送 · Shift+Enter 换行 · 发客户邮件：@发邮件 昵称 正文" autocomplete="off"></textarea>
+                            </div>
+                            <button type="button" id="send-btn">发送</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="view view--ai-cs" id="view-ai-cs" role="main" aria-hidden="true" inert>
+                    <div class="view-ai-cs-inner">
+                        <section class="ai-cs" id="ai-cs-panel" aria-label="AI 客服">
+                            <header class="ai-cs__head">
+                                <div class="ai-cs__head-row">
+                                    <div class="ai-cs__lead">
+                                        <div class="ai-cs__title-wrap">
+                                            <span class="ai-cs__title">AI 客服</span>
+                                            <span class="ai-cs__tag" aria-hidden="true">话术</span>
+                                            <details class="ai-cs__help">
+                                                <summary class="ai-cs__help-sum" title="使用说明" aria-label="使用说明"><span aria-hidden="true">?</span></summary>
+                                                <div class="ai-cs__help-panel" role="note" aria-label="AI 客服说明">
+                                                    <p class="ai-cs__help-intro">
+                                                        回答由所选模型生成，与左侧「对话」所用模型同源；服务端检索你已导入的话术 Excel。<br />
+                                                        需先登录平台。
+                                                    </p>
+                                                    <div class="ai-cs__help-excel">
+                                                        <span class="ai-cs__help-heading">话术格式 · Excel</span>
+                                                        列：<strong>A 问题</strong>，<strong>B 话术</strong>，可选 <strong>C 补充</strong>。<br />
+                                                        进入本页或点「同步检索」会把库中话术同步给检索服务；点击「话术管理」可下载模版、导入与维护列表。
+                                                    </div>
+                                                </div>
+                                            </details>
+                                        </div>
+                                    </div>
+                                    <div class="ai-cs__actions">
+                                        <button type="button" class="ai-cs__btn ai-cs__btn-secondary" id="ai-cs-sync-knowledge" title="从服务器拉取最新话术并刷新向量检索（换电脑后建议点一次）">同步检索</button>
+                                        <button type="button" class="ai-cs__btn-mgmt" id="ai-cs-script-mgmt" title="下载模版、导入与编辑话术">话术管理</button>
+                                    </div>
+                                </div>
+                                <div class="ai-cs__toolbar">
+                                    <div class="ai-cs__field-grp">
+                                        <label class="ai-cs__model-label" for="ai-cs-provider">当前模型</label>
+                                        <select id="ai-cs-provider" class="ai-cs__provider" aria-label="AI 客服推理使用的模型" title="与「对话」页工具栏同源，任一处切换会同步"></select>
+                                    </div>
+                                </div>
+                            </header>
+                            <div class="ai-cs__msgs" id="ai-cs-msgs" aria-live="polite"></div>
+                            <div class="ai-cs__composer">
+                                <textarea id="ai-cs-input" rows="2" placeholder="输入咨询内容，Enter 发送" autocomplete="off"></textarea>
+                                <button type="button" id="ai-cs-send">发送</button>
+                            </div>
+                        </section>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="view view--mail view--settings-outer" id="view-mail" role="main" aria-hidden="true" inert>
+            <div class="view-settings">
+                <div class="view-settings__inner" id="mail-panel" aria-label="邮件">
+                    <h2>邮件</h2>
+                    <p class="hint">在本机配置 IMAP/SMTP，定时拉取新邮件并由所选模型生成建议回复（话术检索需先登录平台）。发信前请核对正文。</p>
+                    <div class="mail-grid" style="margin-top:10px">
+                        <label for="mail-preset">邮箱类型</label>
+                        <select id="mail-preset" title="选择常用服务商可自动填服务器与端口，并查看下方教程">
+                            <option value="qq">QQ 邮箱</option>
+                            <option value="gmail">谷歌邮箱 (Gmail)</option>
+                            <option value="custom" selected>自定义（其它邮箱）</option>
+                        </select>
+                    </div>
+                    <div id="mail-tutorial" class="mail-tutorial" role="region" aria-label="邮箱配置教程"></div>
+                    <div class="mail-row-check">
+                        <label><input type="checkbox" id="mail-enabled" /> 启用邮件拉取</label>
+                    </div>
+                    <div class="mail-grid" style="margin-top:10px">
+                        <label for="mail-poll-ms">轮询间隔 (ms)</label>
+                        <input type="number" id="mail-poll-ms" min="30000" step="1000" value="120000" />
+                        <label for="mail-provider">推理模型</label>
+                        <select id="mail-provider" title="与「模型配置」同源"></select>
+                    </div>
+                    <fieldset class="mail-fieldset">
+                        <legend>IMAP（收信）</legend>
+                        <div class="mail-grid">
+                            <label for="mail-imap-host">服务器</label>
+                            <input type="text" id="mail-imap-host" placeholder="imap.example.com" autocomplete="off" />
+                            <label for="mail-imap-port">端口</label>
+                            <input type="number" id="mail-imap-port" value="993" />
+                            <label for="mail-imap-user">账号</label>
+                            <input type="text" id="mail-imap-user" autocomplete="off" />
+                            <label for="mail-imap-pass">密码</label>
+                            <input type="password" id="mail-imap-pass" autocomplete="off" />
+                            <label for="mail-imap-folder">文件夹</label>
+                            <input type="text" id="mail-imap-folder" value="INBOX" />
+                            <label></label>
+                            <label class="mail-row-check"><input type="checkbox" id="mail-imap-ssl" checked /> SSL/TLS</label>
+                        </div>
+                    </fieldset>
+                    <fieldset class="mail-fieldset">
+                        <legend>SMTP（发信）</legend>
+                        <div class="mail-grid">
+                            <label for="mail-smtp-host">服务器</label>
+                            <input type="text" id="mail-smtp-host" placeholder="smtp.example.com" autocomplete="off" />
+                            <label for="mail-smtp-port">端口</label>
+                            <input type="number" id="mail-smtp-port" value="587" />
+                            <label for="mail-smtp-user">账号</label>
+                            <input type="text" id="mail-smtp-user" autocomplete="off" />
+                            <label for="mail-smtp-pass">密码</label>
+                            <input type="password" id="mail-smtp-pass" autocomplete="off" />
+                            <label for="mail-smtp-from">发件地址</label>
+                            <input type="text" id="mail-smtp-from" placeholder="noreply@example.com" autocomplete="off" />
+                            <label></label>
+                            <label class="mail-row-check"><input type="checkbox" id="mail-smtp-ssl" /> SSL（如 465）</label>
+                            <label></label>
+                            <label class="mail-row-check"><input type="checkbox" id="mail-smtp-starttls" checked /> STARTTLS（常见 587）</label>
+                        </div>
+                    </fieldset>
+                    <fieldset class="mail-fieldset">
+                        <legend>客户邮箱（对话发信）</legend>
+                        <div class="mail-contacts-wrap">
+                            <p class="hint">在「对话」中发送：<strong>@发邮件</strong> + 空格 + <strong>昵称</strong>（与本表一致、勿含空格）+ 空格 + <strong>正文</strong>。发件人身份使用上方 SMTP 的「发件地址」。</p>
+                            <table class="mail-contacts-table">
+                                <thead>
+                                    <tr>
+                                        <th style="width:28%">昵称</th>
+                                        <th>收件邮箱</th>
+                                        <th style="width:72px">操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="mail-contacts-tbody"></tbody>
+                            </table>
+                            <button type="button" id="mail-contact-add">添加客户</button>
+                        </div>
+                    </fieldset>
+                    <div class="mail-actions">
+                        <button type="button" id="mail-save-btn">保存配置</button>
+                        <button type="button" id="mail-poll-btn">立即收信</button>
+                        <span id="mail-save-msg" class="hint"></span>
+                    </div>
+                    <h3 style="margin:24px 0 8px;font-size:15px">待处理</h3>
+                    <p class="hint">以下为拉取后生成的建议回复；可编辑后发送或丢弃。</p>
+                    <div id="mail-queue"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="view view--settings view--settings-outer" id="view-settings" role="main" aria-hidden="true" inert>
+            <div class="view-settings">
+                <div class="view-settings__inner" id="settings-panel" aria-label="模型配置">
+                    <h2>模型配置</h2>
+                    <p class="hint">本机将 <code>llama-completion</code> 与 <code>models/xxx.gguf</code> 放在应用目录；云端填写 OpenAI 兼容 Base URL。</p>
+                    <div id="provider-forms"></div>
+                    <div>
+                        <button type="button" id="save-cfg">保存</button>
+                        <span id="save-msg" class="hint"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="ai-cs-scripts-overlay" class="script-mgmt-overlay" role="presentation" aria-hidden="true">
+    <div class="script-mgmt-shell" role="dialog" aria-modal="true" aria-labelledby="ai-cs-scripts-title" tabindex="-1">
+        <button type="button" class="script-mgmt-close" id="ai-cs-scripts-close" title="关闭" aria-label="关闭">×</button>
+        <div class="script-mgmt-shell__hd">
+            <h2 id="ai-cs-scripts-title">话术管理</h2>
+            <p class="script-mgmt-shell__sub">下载模版、批量导入；与已有「问题」相同的行将覆盖更新。支持分页浏览与编辑。</p>
+        </div>
+        <div class="script-mgmt-body">
+            <div class="script-mgmt-toolbar">
+                <button type="button" class="ai-cs__btn ai-cs__btn-secondary" id="ai-cs-scripts-template" title="下载标准 Excel 模版">下载模版</button>
+                <button type="button" class="ai-cs__btn ai-cs__btn-secondary" id="ai-cs-scripts-import" title="导入 .xlsx / .xls">导入 Excel 话术</button>
+                <input
+                    type="file"
+                    id="ai-cs-scripts-file"
+                    accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
+                    hidden
+                />
+            </div>
+            <div id="ai-cs-scripts-pane-list">
+                <div class="script-mgmt-table-wrap">
+                    <table class="script-mgmt-table" aria-label="话术列表">
+                        <thead>
+                            <tr>
+                                <th>问题</th>
+                                <th>话术</th>
+                                <th>补充</th>
+                                <th>导入时间</th>
+                                <th>导入用户</th>
+                                <th aria-label="操作"></th>
+                            </tr>
+                        </thead>
+                        <tbody id="ai-cs-scripts-tbody"></tbody>
+                    </table>
+                </div>
+                <div
+                    class="script-mgmt-pagination"
+                    id="ai-cs-scripts-pagination"
+                    role="navigation"
+                    aria-label="话术分页"
+                    hidden
+                >
+                    <button type="button" class="ai-cs__btn ai-cs__btn-secondary" id="ai-cs-scripts-page-prev">上一页</button>
+                    <span class="script-mgmt-pagination__label" id="ai-cs-scripts-page-label"></span>
+                    <button type="button" class="ai-cs__btn ai-cs__btn-secondary" id="ai-cs-scripts-page-next">下一页</button>
+                </div>
+                <p id="ai-cs-scripts-empty" hidden>暂无话术，可先下载模版填写后导入。</p>
+            </div>
+            <div id="ai-cs-scripts-pane-edit" class="script-mgmt-pane--edit" hidden>
+                <div class="script-mgmt-field">
+                    <label for="ai-cs-script-edit-q">问题</label>
+                    <textarea id="ai-cs-script-edit-q" rows="2" autocomplete="off"></textarea>
+                </div>
+                <div class="script-mgmt-field">
+                    <label for="ai-cs-script-edit-s">话术</label>
+                    <textarea id="ai-cs-script-edit-s" rows="4" autocomplete="off"></textarea>
+                </div>
+                <div class="script-mgmt-field">
+                    <label for="ai-cs-script-edit-e">补充（可选）</label>
+                    <textarea id="ai-cs-script-edit-e" rows="2" autocomplete="off"></textarea>
+                </div>
+                <div class="script-mgmt-edit-actions">
+                    <button type="button" class="ai-cs__btn ai-cs__btn-secondary" id="ai-cs-script-edit-cancel">取消</button>
+                    <button type="button" class="ai-cs__btn-mgmt" id="ai-cs-script-edit-save">保存</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="login-overlay" class="account-overlay" role="presentation" aria-hidden="true">
+    <div class="account-shell" role="dialog" aria-modal="true" aria-label="账号与个人资料" tabindex="-1">
+        <button type="button" class="account-close" id="login-cancel" title="关闭" aria-label="关闭">×</button>
+
+        <div id="account-mode-profile" class="account-panel profile-panel-root" hidden>
+            <header class="account-hero account-hero--compact">
+                <h2 id="account-dialog-title" class="account-hero__title">个人资料</h2>
+                <p class="account-hero__sub">点击头像即可更换；资料会保存到平台。</p>
+            </header>
+            <div class="account-body account-body--flush profile-layout">
+                <div class="profile-identity">
+                    <button type="button" class="profile-avatar-hit" id="profile-avatar-hit" title="点击更换头像" aria-label="点击更换头像">
+                        <span class="profile-avatar-wrap">
+                            <img id="profile-avatar-img" alt="" width="48" height="48" hidden decoding="async" />
+                            <span class="profile-avatar-fallback" id="profile-avatar-fallback">?</span>
+                        </span>
+                        <span class="profile-avatar-hit__mask" aria-hidden="true">更换</span>
+                    </button>
+                    <div class="profile-identity__text">
+                        <div class="profile-identity__title-row">
+                            <div class="profile-identity__name" id="profile-display-name">—</div>
+                            <button type="button" id="login-logout" class="profile-identity__logout-btn">退出登录</button>
+                        </div>
+                        <div class="profile-identity__meta-row">
+                            <div class="profile-identity__meta" id="profile-display-sub">—</div>
+                            <a href="#" id="profile-open-password" class="profile-identity__pwd-link">修改密码</a>
+                        </div>
+                    </div>
+                </div>
+                <input type="hidden" id="profile-head-img" autocomplete="off" />
+
+                <section class="profile-card profile-card--split-head" aria-labelledby="profile-card-basic-title">
+                    <h3 id="profile-card-basic-title" class="profile-card__title">资料</h3>
+                    <div class="form-grid-2">
+                        <div class="login-field">
+                            <label for="profile-nickname">昵称</label>
+                            <input type="text" id="profile-nickname" maxlength="64" placeholder="怎么称呼你" autocomplete="nickname" spellcheck="false" />
+                        </div>
+                        <div class="login-field">
+                            <label for="profile-sex">性别</label>
+                            <select id="profile-sex">
+                                <option value="">未设置</option>
+                                <option value="1">男</option>
+                                <option value="2">女</option>
+                            </select>
+                        </div>
+                        <div class="login-field field-span-2">
+                            <label for="profile-birthday">生日</label>
+                            <input type="date" id="profile-birthday" />
+                        </div>
+                    </div>
+                    <button type="button" class="profile-actions-bar__btn profile-actions-bar__btn--primary" id="profile-save">保存资料</button>
+                </section>
+
+                <div class="profile-msg" id="profile-msg" aria-live="polite"></div>
+            </div>
+        </div>
+
+        <div id="account-mode-login" class="account-panel erp-auth">
+            <div class="erp-auth__panel">
+                    <div class="erp-auth__brand">
+                        <h2 id="erp-auth-title">PX-Claw 系统</h2>
+                        <p id="erp-auth-subtitle">登录后进入 PX-Claw 工作台</p>
+                    </div>
+                    <div id="login-status" class="login-status" hidden></div>
+                    <div id="erp-login-stack">
+                    <div class="erp-tabs" role="tablist" aria-label="登录方式">
+                        <button type="button" class="erp-tab is-active" id="login-tab-password" role="tab" aria-selected="true">账号登录</button>
+                        <button type="button" class="erp-tab" id="login-tab-sms" role="tab" aria-selected="false">手机登录</button>
+                    </div>
+                    <div class="erp-login-panes">
+                        <div id="erp-pane-password" class="erp-pane" role="tabpanel">
+                            <div class="erp-field-stack">
+                                <input type="text" id="login-username" name="username" class="erp-input" placeholder="用户名" autocomplete="username" spellcheck="false" />
+                                <input type="password" id="login-password" name="password" class="erp-input" placeholder="密码" autocomplete="current-password" />
+                            </div>
+                        </div>
+                        <div id="erp-pane-mobile" class="erp-pane" role="tabpanel" hidden>
+                            <div class="erp-field-stack">
+                                <input type="tel" id="login-phone" class="erp-input" placeholder="手机号" inputmode="numeric" maxlength="11" autocomplete="tel" />
+                                <div class="erp-row-split">
+                                    <input type="text" id="login-captcha-input" class="erp-input erp-row-split__grow" placeholder="图形验证码" maxlength="12" autocomplete="off" spellcheck="false" />
+                                    <button type="button" class="erp-captcha-thumb" id="login-captcha-hit" title="点击刷新图形验证码" aria-label="刷新图形验证码">
+                                        <img id="login-captcha-img" alt="图形验证码" width="118" height="44" hidden />
+                                    </button>
+                                    <input type="hidden" id="login-captcha-key" autocomplete="off" />
+                                </div>
+                                <div class="erp-row-split">
+                                    <input type="text" id="login-sms-input" class="erp-input erp-row-split__grow" placeholder="短信验证码" inputmode="numeric" maxlength="8" autocomplete="one-time-code" spellcheck="false" />
+                                    <button type="button" class="erp-btn-sms" id="login-btn-sms">获取验证码</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <button type="button" class="erp-btn-primary-lg" id="login-submit">登录</button>
+                    <div class="erp-auth-footer">
+                        <button type="button" class="erp-link" id="link-open-register">注册</button>
+                    </div>
+                    <div class="erp-msg login-msg" id="login-msg" aria-live="polite"></div>
+                    </div>
+
+                    <div id="erp-register-stack" hidden>
+                    <div class="login-field">
+                        <label for="reg-username">账号</label>
+                        <input type="text" id="reg-username" class="erp-input" maxlength="64" autocomplete="off" spellcheck="false" />
+                    </div>
+                    <div class="login-field">
+                        <label for="reg-password">密码</label>
+                        <input type="password" id="reg-password" class="erp-input" placeholder="8 位以上，含数字和字母" maxlength="64" autocomplete="new-password" />
+                    </div>
+                    <div class="login-field">
+                        <label for="reg-password2">确认密码</label>
+                        <input type="password" id="reg-password2" class="erp-input" maxlength="64" autocomplete="new-password" />
+                    </div>
+                    <div class="login-field">
+                        <label for="reg-nickname">昵称</label>
+                        <input type="text" id="reg-nickname" class="erp-input" placeholder="选填" maxlength="64" autocomplete="nickname" spellcheck="false" />
+                    </div>
+                    <div class="login-field">
+                        <label for="reg-mobile">手机号</label>
+                        <input type="tel" id="reg-mobile" class="erp-input" inputmode="numeric" maxlength="11" autocomplete="tel" />
+                    </div>
+                    <div class="login-field">
+                        <label for="reg-captcha-input">图形码</label>
+                        <div class="erp-row-split">
+                            <input type="text" id="reg-captcha-input" class="erp-input erp-row-split__grow" maxlength="12" autocomplete="off" spellcheck="false" />
+                            <button type="button" class="erp-captcha-thumb" id="reg-captcha-hit" title="点击刷新图形验证码" aria-label="刷新图形验证码">
+                                <img id="reg-captcha-img" alt="图形验证码" width="118" height="44" hidden />
+                            </button>
+                            <input type="hidden" id="reg-captcha-key" autocomplete="off" />
+                        </div>
+                    </div>
+                    <div class="login-field">
+                        <label for="reg-sms-input">短信码</label>
+                        <div class="erp-row-split">
+                            <input type="text" id="reg-sms-input" class="erp-input erp-row-split__grow" placeholder="短信验证码" inputmode="numeric" maxlength="8" autocomplete="one-time-code" spellcheck="false" />
+                            <button type="button" class="erp-btn-sms" id="reg-btn-sms">获取验证码</button>
+                        </div>
+                    </div>
+                    <hr class="erp-register__divider" />
+                    <div class="erp-register-actions">
+                        <button type="button" class="erp-btn-outline" id="register-cancel">返回</button>
+                        <button type="button" class="erp-btn-register" id="register-submit">注册</button>
+                    </div>
+                    <div class="erp-msg" id="register-msg" aria-live="polite"></div>
+                    </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="avatar-crop-overlay" class="avatar-crop-overlay" role="presentation" aria-hidden="true">
+    <div class="avatar-crop-sheet" role="dialog" aria-modal="true" aria-labelledby="avatar-crop-title">
+        <h3 id="avatar-crop-title" class="avatar-crop-sheet__title">裁剪头像</h3>
+        <p class="avatar-crop-sheet__hint">拖动调整位置，滚轮或滑块缩放；圆形区域内为最终头像。</p>
+        <div class="avatar-crop-stage">
+            <canvas id="avatar-crop-canvas" width="260" height="260" aria-label="裁剪预览"></canvas>
+        </div>
+        <div class="avatar-crop-zoom-row">
+            <label for="avatar-crop-zoom">缩放</label>
+            <input type="range" id="avatar-crop-zoom" min="100" max="300" value="100" />
+        </div>
+        <div class="avatar-crop-sheet__actions">
+            <button type="button" class="avatar-crop-sheet__cancel" id="avatar-crop-cancel">取消</button>
+            <button type="button" class="avatar-crop-sheet__ok" id="avatar-crop-ok">确定上传</button>
+        </div>
+    </div>
+</div>
+
+<div id="pwd-overlay" class="pwd-overlay" role="presentation" aria-hidden="true">
+    <div class="pwd-sheet" role="dialog" aria-modal="true" aria-labelledby="pwd-sheet-title" tabindex="-1">
+        <h3 id="pwd-sheet-title" class="pwd-sheet__title">修改密码</h3>
+        <div class="form-grid-2">
+            <div class="login-field field-span-2">
+                <label for="profile-readonly-mobile">绑定手机</label>
+                <div class="account-readonly" id="profile-readonly-mobile">—</div>
+            </div>
+            <div class="login-field field-span-2">
+                <label for="pwd-captcha-input">图形验证码</label>
+                <div class="erp-row-split">
+                    <input
+                        type="text"
+                        id="pwd-captcha-input"
+                        class="erp-input erp-row-split__grow"
+                        placeholder="图形验证码"
+                        maxlength="12"
+                        autocomplete="off"
+                        spellcheck="false"
+                    />
+                    <button type="button" class="erp-captcha-thumb" id="pwd-captcha-hit" title="点击刷新图形验证码" aria-label="刷新图形验证码">
+                        <img id="pwd-captcha-img" alt="图形验证码" width="118" height="44" hidden />
+                    </button>
+                    <input type="hidden" id="pwd-captcha-key" autocomplete="off" />
+                </div>
+            </div>
+            <div class="login-field field-span-2">
+                <label for="pwd-sms">短信验证码</label>
+                <div class="erp-row-split">
+                    <input
+                        type="text"
+                        id="pwd-sms"
+                        class="erp-input erp-row-split__grow"
+                        inputmode="numeric"
+                        maxlength="8"
+                        placeholder="短信验证码"
+                        autocomplete="one-time-code"
+                        spellcheck="false"
+                    />
+                    <button type="button" class="erp-btn-sms" id="pwd-btn-sms">获取验证码</button>
+                </div>
+            </div>
+            <div class="login-field field-span-2">
+                <label for="pwd-new">新密码</label>
+                <input type="password" id="pwd-new" maxlength="64" placeholder="至少 8 位" autocomplete="new-password" />
+            </div>
+            <div class="login-field field-span-2">
+                <label for="pwd-confirm">确认新密码</label>
+                <input type="password" id="pwd-confirm" maxlength="64" placeholder="再次输入" autocomplete="new-password" />
+            </div>
+        </div>
+        <div class="pwd-sheet__actions">
+            <button type="button" class="pwd-close" id="pwd-close">取消</button>
+            <button type="button" class="btn-secondary" id="profile-password-submit">确定</button>
+        </div>
+        <div class="profile-msg" id="pwd-msg" aria-live="polite"></div>
+    </div>
+</div>
+
+<div id="ctx-menu" class="ctx-menu" hidden role="menu" aria-label="会话菜单">
+    <button type="button" role="menuitem" data-action="open">打开</button>
+    <button type="button" role="menuitem" data-action="rename">重命名</button>
+    <button type="button" role="menuitem" data-action="copy-title">复制标题</button>
+    <button type="button" role="menuitem" class="ctx-menu__danger" data-action="delete">删除</button>
+</div>
+
+<script src="./app.js"></script>
+</body>
+</html>
