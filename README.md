@@ -2,6 +2,21 @@
 
 可移植 AI 客服平台：桌面端对话与 AI 客服、知识库 RAG 检索、可选邮件辅助回复，以及用户 / 文件 / 安装包等后端能力。三端可整包复制到 U 盘或内网离线部署。
 
+## 对话功能
+可以根据本地模型或者线上模型实现对话
+<img width="1230" height="988" alt="image" src="https://github.com/user-attachments/assets/078ed704-fffb-4205-b121-cad01603e2c7" />
+
+## AI客服
+可以自由配置话术增强AI客服专业回答能力
+<img width="1234" height="990" alt="image" src="https://github.com/user-attachments/assets/a1665239-f7d2-41e4-b689-123df2cf0270" />
+
+## 邮件
+可以配置邮箱自动读取通过对话发送邮件
+<img width="1234" height="995" alt="image" src="https://github.com/user-attachments/assets/5d916632-d066-4ab7-a000-153e2a955ded" />
+
+## 多模型接入
+<img width="1230" height="986" alt="image" src="https://github.com/user-attachments/assets/d8cd3736-eb75-4e64-9a9b-23582653b428" />
+
 ## 项目结构
 
 | 模块 | 说明 | 文档 |
